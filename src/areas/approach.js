@@ -401,6 +401,122 @@ function spire(S, cx, cz, hw, hd, baseY, apexY) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// GREEBLE HELPERS — surface detail that breaks up the big uniform wall faces
+// (world-bible: a plague-abandoned fortress; art-direction: no large area should
+// read as one flat sheet of stone). All merged into the existing per-material
+// batches, so they add almost no draw calls. Variation comes from a stable
+// per-index hash (NEVER Math.random / Date.now — those THROW in this build), so
+// the geometry is identical on every load. Greebles are ACCENTS, not a new skin.
+// ---------------------------------------------------------------------------
+
+// deterministic pseudo-random in [0,1) from an integer seed. Stable per index.
+function hval(i) { const s = Math.sin((i + 1) * 12.9898) * 43758.5453; return s - Math.floor(s); }
+
+// a flat wall-face quad on an X-normal face (x = xf), spanning y[y0,y1] z[z0,z1]
+function faceQuadX(batch, xf, y0, y1, z0, z1) {
+  batch.quad([xf, y0, z0], [xf, y0, z1], [xf, y1, z1], [xf, y1, z0], z1 - z0, y1 - y0);
+}
+// a flat wall-face quad on a Z-normal face (z = zf), spanning y[y0,y1] x[x0,x1]
+function faceQuadZ(batch, zf, y0, y1, x0, x1) {
+  batch.quad([x0, y0, zf], [x1, y0, zf], [x1, y1, zf], [x0, y1, zf], x1 - x0, y1 - y0);
+}
+
+// GREEBLE the long CURTAIN-WALL inner faces (x=±18, ward side). `face` is the
+// ward-facing plane x; `n` (=-sx) is the outward (ward) normal. Skips the mid-run
+// wall-tower footprint (z≈28.4-33.6). Merges into stone(B)/darkStone(D)/iron(I)/
+// ivy(V). Keeps clear of the existing two-tier arrow-loops (y3 & y6).
+function curtainGreebles(B, D, I, V, sx, face) {
+  const n = -sx;                        // outward (toward the ward) normal
+  const proud = face + n * 0.06;        // ashlar blocks standing proud toward the ward
+  const inTower = (z) => (z > 28.4 && z < 33.6);
+
+  // PUTLOG HOLES — two full marching rows of scaffolding sockets + a ragged 3rd
+  for (let k = 0; k < 13; k++) {
+    const z = 16.6 + k * 2.4; if (z > 46.6) break; if (inTower(z)) continue;
+    for (const y of [2.4, 5.6]) D.box(face, y, z, 0.09, 0.22, 0.24);
+    if (hval(k * 3 + (sx > 0 ? 7 : 2)) > 0.5) D.box(face, 7.8, z + 1.2, 0.09, 0.2, 0.22);
+  }
+  // IRREGULAR ASHLAR — proud lighter blocks, recessed darker blocks, so the
+  // coursing isn't a flat sheet
+  for (let k = 0; k < 7; k++) {
+    const z = 17.5 + hval(k * 2 + (sx > 0 ? 3 : 8)) * 28; if (inTower(z)) continue;
+    B.box(proud, 1.6 + hval(k * 5 + 2) * 6.2, z, 0.55 + hval(k) * 0.4, 0.42 + hval(k + 9) * 0.24, 0.12);
+    const dz = 17.5 + hval(k * 4 + (sx > 0 ? 5 : 6)) * 28; if (inTower(dz)) continue;
+    D.box(face, 1.4 + hval(k * 3 + 4) * 6.4, dz, 0.5 + hval(k + 1) * 0.5, 0.36 + hval(k + 7) * 0.3, 0.05);
+  }
+  // patched-masonry rectangles (larger darker repairs)
+  for (const [z, y, w, h] of [[sx > 0 ? 21.0 : 35.5, 4.3, 1.5, 1.1], [sx > 0 ? 41.5 : 26.0, 2.6, 1.3, 1.0]])
+    if (!inTower(z)) D.box(face, y, z, w, h, 0.05);
+  // DAMP STAINS — thin vertical streaks bleeding down from the crenellations
+  for (const z of [19.4, 24.6, 36.8, 43.2]) if (!inTower(z)) D.box(face, 6.3, z, 0.05, 4.6, 0.34);
+  // shorter stains below arrow-loops
+  for (const z of [23.7, 39.3]) D.box(face, 3.7, z, 0.05, 2.6, 0.26);
+  // CRACKS — two step-cracks per wall (short offset dark segments)
+  for (const [z0, y0] of [[26.0, 8.0], [37.5, 7.4]])
+    for (let s = 0; s < 6; s++) D.box(face, y0 - s * 0.55, z0 + s * 0.28 * (sx > 0 ? 1 : -1), 0.05, 0.36, 0.1);
+  // IRON — a couple of tie-rings / wall-brackets + one empty torch bracket
+  for (const [z, y] of [[20.5, 4.2], [43.5, 4.6]]) {
+    I.box(face + n * 0.12, y, z, 0.24, 0.1, 0.1);           // stub bracket
+    I.box(face + n * 0.2, y - 0.14, z, 0.08, 0.22, 0.08);   // hanging ring
+  }
+  const tz = sx > 0 ? 30.0 : 33.9;                          // clear of the wall-tower
+  I.box(face + n * 0.14, 5.4, tz, 0.28, 0.09, 0.09);        // torch arm
+  I.box(face + n * 0.22, 5.75, tz, 0.09, 0.4, 0.16);        // torch socket cup
+  // MOSS / LICHEN — ivy patches creeping up the wall feet & shaded corners
+  for (const [z, w, top] of [[18.5, 1.6, 1.9], [35.0, 1.4, 1.6], [45.8, 1.5, 2.2]])
+    if (!inTower(z)) faceQuadX(V, face + n * 0.02, 0.05, top, z - w / 2, z + w / 2);
+}
+
+// GREEBLE a GATEHOUSE tower ward face (z=GATE_Z0) + its passage wall. `txc` is
+// the tower centre x (±6); `sx` its side. Merges into stone(B)/darkStone(D)/
+// iron(I)/ivy(V). Keeps the passage x[-3,3] and the gate arch clear.
+function gatehouseGreebles(B, D, I, V, sx, txc) {
+  const fz = GATE_Z0 - 0.02, n = -1;                       // ward-facing tower face
+  // PUTLOG HOLES (3×3 grid, between the loop tiers at y 4/7.5/11/14.5)
+  for (let r = 0; r < 3; r++) { const y = 2.6 + r * 4.3;
+    for (let c = 0; c < 3; c++) D.box(txc - 2 + c * 2, y, fz, 0.24, 0.22, 0.08); }
+  // IRREGULAR ASHLAR — proud + recessed
+  for (let k = 0; k < 5; k++) {
+    B.box(txc - 2.4 + hval(k * 3 + (sx > 0 ? 2 : 9)) * 4.8, 2 + hval(k * 2 + 1) * 12, fz + n * 0.06,
+      0.5 + hval(k) * 0.4, 0.4, 0.12);
+    D.box(txc - 2.4 + hval(k * 5 + (sx > 0 ? 4 : 7)) * 4.8, 2 + hval(k * 4 + 3) * 12, fz, 0.5, 0.4, 0.05);
+  }
+  // DAMP STAINS bleeding from the machicolation crown
+  for (const dx of [-1.8, 0.4, 2.0]) D.box(txc + dx, TOWER_H * 0.5, fz, 0.34, TOWER_H * 0.55, 0.05);
+  // CRACK — one step-crack on the +X tower only (asymmetry)
+  if (sx > 0) for (let s = 0; s < 6; s++) D.box(txc + 1.2 - s * 0.2, 10 - s * 0.6, fz, 0.1, 0.34, 0.05);
+  // MOSS at the tower foot (well outside the gate arch x[-3,3])
+  faceQuadZ(V, fz, 0.05, 1.9, txc + (sx > 0 ? 0.8 : -2.8), txc + (sx > 0 ? 2.8 : -0.8));
+  // IRON in the gate PASSAGE — tie-rings on the passage walls + a torch bracket
+  const pf = sx * PASS_HX;                                  // passage wall face x=±3
+  for (const z of [50.5, 54.5]) {
+    I.box(pf - sx * 0.1, 2.2, z, 0.1, 0.1, 0.24);
+    I.box(pf - sx * 0.16, 2.05, z, 0.08, 0.22, 0.08);
+  }
+  I.box(pf - sx * 0.12, 2.7, 55.8, 0.1, 0.09, 0.28);        // torch arm (clear of head height)
+  I.box(pf - sx * 0.18, 3.0, 55.8, 0.09, 0.36, 0.12);       // torch socket
+}
+
+// GREEBLE a REAR-KEEP mass ward face (z=zf). ONLY above KEEP_Y0 (nothing intrudes
+// the interior below). Merges into the keep's stone(B)/darkStone(D) batches.
+function keepGreebles(B, D, sx, cx, zf, topY) {
+  const n = 1, base = KEEP_Y0, span = topY - KEEP_Y0;
+  // PUTLOG HOLES marching across the tall shaft (kept above the raised base)
+  for (let r = 0; r < 3; r++) { const y = base + 1.9 + r * 5.5; if (y > topY - 2) break;
+    for (let c = 0; c < 4; c++) D.box(cx - 2.4 + c * 1.6, y, zf, 0.22, 0.2, 0.08); }
+  // IRREGULAR ASHLAR — proud + recessed
+  for (let k = 0; k < 6; k++) {
+    B.box(cx - 2.6 + hval(k * 3 + (sx > 0 ? 2 : 6)) * 5.2, base + 1 + hval(k * 2 + 1) * (span - 3), zf + n * 0.06,
+      0.5 + hval(k) * 0.4, 0.4, 0.12);
+    D.box(cx - 2.6 + hval(k * 5 + 3) * 5.2, base + 1 + hval(k * 4 + 2) * (span - 3), zf, 0.5, 0.38, 0.05);
+  }
+  // DAMP STAINS from the crown down
+  for (const dx of [-1.7, 0.3, 1.9]) D.box(cx + dx, base + span * 0.5 + 3, zf, 0.32, span * 0.5, 0.05);
+  // CRACK on the ruined (+X) keep
+  if (sx > 0) for (let s = 0; s < 7; s++) D.box(cx + 1.4 - s * 0.22, topY - 3 - s * 0.7, zf, 0.1, 0.4, 0.05);
+}
+
 // --------------------------------------------------------------- FLANKING TOWERS
 // Two tall square towers standing proud of the façade corners, so the great
 // door sits at the foot of a pair of looming masses. Machicolated crowns, four
@@ -522,6 +638,8 @@ function buildKeep(root, M) {
       crossLoop(D, cx, y, zf - 0.02, 'z');
       crossLoop(D, cx + sx * hw - sx * 0.02, y, zc, 'x');
     }
+    // GREEBLES on the tall keep ward face (only ABOVE KEEP_Y0 — nothing below)
+    keepGreebles(B, D, sx, cx, zf, topY);
     deepCrown(B, cx, zc, hw, hd, topY, 0.55);
     // corner turrets with little slate spirelets (a spikier crown)
     for (const sx2 of [-1, 1]) for (const sz2 of [-1, 1]) {
@@ -556,7 +674,9 @@ function buildKeep(root, M) {
 // scale. Everything grey, weathered.
 function buildWard(root, M) {
   const B = new MeshBatch();      // curtain + rampart stone
-  const D = new MeshBatch();      // arrow-loop shadows
+  const D = new MeshBatch();      // arrow-loop shadows + recesses/stains
+  const I = new MeshBatch();      // iron fittings (rings, brackets, torch)
+  const V = new MeshBatch();      // moss / lichen (ivy material)
   const zc = (WARD_Z0 + WARD_Z1) / 2, len = WARD_Z1 - WARD_Z0; // 31.5, 33
   const th = 1.1;                 // thicker, heavier wall
 
@@ -569,10 +689,26 @@ function buildWard(root, M) {
     // oversailing corbel course + a wall-walk lip
     B.box(xc, CURTAIN_H - 0.3, zc, th + 0.5, 0.55, len);
     B.box(xc, CURTAIN_H + 0.12, zc, th + 0.2, 0.28, len);
-    // machicolated merlons along the walk, with crenel gaps
+    // machicolated merlons along the walk, with crenel gaps — with DECAY: a few
+    // merlons toppled (wider crenels) and one chipped down, asymmetric per wall.
+    let mi = 0;
     for (let z = WARD_Z0 + 0.9; z < WARD_Z1 - 0.4; z += 1.85) {
-      B.box(xc, CURTAIN_H + 0.65, z, 0.55, 0.95, 1.05);
+      const toppled = sx > 0 ? (mi === 4 || mi === 11) : (mi === 8);
+      if (!toppled) {
+        const chip = (sx < 0 && mi === 3) ? 0.5 : 1.0;   // one chipped-down merlon
+        B.box(xc, CURTAIN_H + 0.65 - (1 - chip) * 0.35, z, 0.55, 0.95 * chip, 1.05);
+      }
+      mi++;
     }
+    // a fallen merlon block lying on the wall-walk where the +X wall toppled one
+    if (sx > 0) {
+      const fb = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.5, 0.9), M.stone);
+      fb.position.set(xc - 0.1, CURTAIN_H + 0.4, WARD_Z0 + 0.9 + 4 * 1.85 + 0.35);
+      fb.rotation.set(0.15, 0.5, 0.25);
+      fb.name = 'appr_ward_fallen_merlon'; root.add(fb);
+    }
+    // GREEBLES breaking up the big flat curtain face
+    curtainGreebles(B, D, I, V, sx, face);
     // regularly-spaced cross arrow-loops in two tiers down the inner face
     for (let z = WARD_Z0 + 3.5; z < WARD_Z1 - 2; z += 5.2) {
       crossLoop(D, face, 3.0, z, 'x');
@@ -587,6 +723,8 @@ function buildWard(root, M) {
   }
   B.build(root, M.stone, 'appr_ward_stone');
   D.build(root, M.darkStone, 'appr_ward_loops');
+  I.build(root, M.iron, 'appr_ward_iron');
+  V.build(root, M.ivy, 'appr_ward_moss');
 
   buildWell(root, M, -12.5, 30);
   buildMountingBlock(root, M, 12.5, 22);
@@ -628,7 +766,9 @@ function buildMountingBlock(root, M, cx, cz) {
 function buildGatehouse(root, M) {
   const B = new MeshBatch();      // tower + wall stone
   const S = new MeshBatch();      // slate caps
-  const D = new MeshBatch();      // arrow-loop shadows
+  const D = new MeshBatch();      // arrow-loop shadows + recesses/stains
+  const I = new MeshBatch();      // iron fittings (passage rings, torch brackets)
+  const V = new MeshBatch();      // moss / lichen (ivy material)
   const gzc = (GATE_Z0 + GATE_Z1) / 2, gd = GATE_Z1 - GATE_Z0;
 
   // two square towers (solid rubble masses; inner face x=±3 = passage walls)
@@ -652,7 +792,16 @@ function buildGatehouse(root, M) {
       crossLoop(D, txc, y, GATE_Z1 + 0.02, 'z');
       crossLoop(D, sx * 9.0 - sx * 0.02, y, gzc, 'x');   // outward side face
     }
+    // GREEBLES on the tower ward face + iron in the passage
+    gatehouseGreebles(B, D, I, V, sx, txc);
   }
+  // central DAMP STAINS bleeding from the murder-hole gallery down the over-
+  // passage block (above the gate arch head, so the entry mouth stays clear)
+  for (const dx of [-2.1, 2.1]) D.box(dx, 11.0, GATE_Z0 - 0.02, 0.32, 4.2, 0.05);
+  // a toppled merlon fallen from the passage-roof parapet (decay, no collider)
+  const gfb = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.55, 0.6), M.stone);
+  gfb.position.set(1.6, TOWER_H + 0.35, gzc - 1.0); gfb.rotation.set(0.2, 0.4, 0.3);
+  gfb.name = 'appr_gatehouse_fallen_merlon'; root.add(gfb);
 
   // seal the corners between tower (x=±9) and curtain (x=±18) at the gate line
   for (const sx of [-1, 1]) {
@@ -699,6 +848,9 @@ function buildGatehouse(root, M) {
 
   B.build(root, M.stone, 'appr_gatehouse_stone');
   S.build(root, M.slate, 'appr_gatehouse_caps');
+  D.build(root, M.darkStone, 'appr_gatehouse_loops');
+  I.build(root, M.iron, 'appr_gatehouse_iron');
+  V.build(root, M.ivy, 'appr_gatehouse_moss');
 
   // dropped iron PORTCULLIS at z57 (grid across x[-3,3], y[0,5]) ------------
   const P = new MeshBatch();

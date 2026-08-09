@@ -400,3 +400,62 @@ interaction/index.js: added togglePause() bound to KeyP — shows the pause over
 (Restart / Fullscreen) + stops control; P again (or clicking the overlay) resumes
 via requestLock. Guarded off while reading / intro up. Hint text updated to
 "P pause / menu". Verified: playing→P raises menu + active=false.
+
+---
+
+## Phase: fixes + 4 new wings + automap + HOSTED
+
+- Rose window now mirrored on the interior nave face (glowing oculus from inside).
+- Side-chamber doors: 4 invisible portal-anchors replaced with visible stone-framed
+  dark doorways (N/S walls). ROOT-CAUSE BUG FOUND: the rear keep (appr_keep_stone,
+  approach.js) footprint x[7.5,15.1] z[1.2,8.8] was intersecting the side chamber
+  interior (x[6,13] z[0,8]) — a solid ground-to-30m mass burying the whole chamber +
+  its colliders. Fixed by lifting the keep base above the interior roofline
+  (KEEP_Y0=9.6, no ground collider), like the lantern tower. Doors verified visible.
+- Pause moved to P (Esc is browser-owned in the embedded preview).
+- DOOM-style AUTOMAP overlay (M): node-graph of all zones, current highlighted,
+  available exits, reveal-on-visit, "?" for unexplored. src/core/map.js + zones.js
+  (world.currentZone) + main.js + index.html.
+- 4 NEW WINGS (self-contained island modules, agents): The Keep (founder's hall +
+  upper chamber), St. Ursel's Chapel (Anselm's body, Walburga leaf), The Long Gallery
+  (gutted astronomical clock, Payment I), The Hortus Clausus (living poison garden).
+  Wired off the INNER WARD via 4 visible curtain-wall doorways; BOUNDS + zones + map
+  graph extended. 15 zones total, all reachable (Keep walk-in verified, floor-follow ok).
+
+HOSTED on GitHub Pages: repo github.com/kpgrubb/gothic-castle, live at
+https://kpgrubb.github.io/gothic-castle/ (verified: HTTP 200, app boots, 15 zones,
+only favicon 404). Deployed via gh-pages branch (OAuth token lacked `workflow` scope
+to push the Actions workflow; deploy.yml left untracked locally for later). Vite
+base:'./' makes the subpath work. npm run build OK.
+
+---
+
+## Phase: atmosphere pass — vermin, weather, greebles, painting fix
+
+Six requests, four agents + integration:
+1. VERMIN (src/atmosphere/vermin.js): 365 maggots (writhe: per-instance sin bob +
+   curl + crawl-jitter) + 23 roaches (scuttle elliptical loops with dart/pause),
+   2 InstancedMesh draws, 16 patches on interior floors beside corpses/stains
+   (crypt, nave/decay, infirmary, chapel, keep, long gallery, cloister). Grounded,
+   no colliders. Wired in main.js (createVermin).
+2. RAIN (src/atmosphere/weather.js): 400-streak camera-following LineSegments, shown
+   ONLY when the camera XZ is within an outdoor region (ward (0,36) r28, cloister
+   (100,-100) r15, hortus (150,100) r15) — spatial gate w/ 5m fade, free indoors.
+3. VULTURES: 15 (5/region) near-black silhouettes circling at varied r/height/speed,
+   banking into the turn, subtle wing-flap. Always on.
+4. CLOISTER OUTDOOR: weather.js adds a gradient sky box + HemisphereLight + soft
+   directional to the Cloister and Hortus (ramped by proximity so interiors aren't
+   blown out). Cloister now reads as a daylit open-air garth in the rain (was black).
+5. GREEBLES (approach.js): putlog holes, irregular/patched ashlar, damp stains,
+   cracks, iron tie-rings/torch brackets, moss, and parapet DECAY (toppled/chipped
+   merlons, fallen-merlon blocks) across curtain walls / gatehouse / keep (keep
+   greebles above KEEP_Y0). Incidental fix: gatehouse arrow-loop batch was never
+   .build()-ed — now rendered. No new colliders.
+6. LONG GALLERY paintings: frames were solid slabs COVERING the canvases (z-fight).
+   Rebuilt as raised border bars around each; canvas mounted 0.06m proud, facing the
+   room. 5 west portraits + 2 far + 1 tapestry, visible head-on.
+
+Verified (Playwright): ward shows rain + 2 vultures + detailed walls; cloister is a
+daylit rainy garth; vermin scattered by the cloister dead (365+23 instanced); gallery
+portrait + tapestry hang flat head-on. 60fps, lights 46->85, colliders ->265, 0
+console errors (favicon only). npm run build OK.

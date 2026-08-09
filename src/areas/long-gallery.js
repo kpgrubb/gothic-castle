@@ -331,35 +331,59 @@ function buildWindows(root, M) {
 // tapestry), and two portraits on the far wall flanking the clock bay. Grounded
 // to the wall — hung, not floating (mounted flush to a solid wall face).
 function buildPortraits(root, M) {
-  const xw = -XW_IN + 0.03;                       // just proud of the west wall face
-  // portrait height band; centre y ~2.3, sizes vary a touch by index
+  // West wall INTERIOR face is at x = -XW_IN (-3.75); the room lies toward +X.
+  const XW = -XW_IN;                              // west wall inner face x = -3.75
+  const canvasX = XW + 0.06;                      // canvas 6 cm PROUD into the room (no z-fight)
+  const frameX = XW + 0.07;                       // frame band centre, stands proud around it
+  const cy = 2.6;                                 // hanging centre height (well within 5.2 m wall)
+  const FB = 0.09, FD = 0.12;                     // frame border thickness / proud depth (x)
+  // A raised oak border of four bars around a canvas — NOT a slab over its face,
+  // so the painting reads head-on. Bars sit proud of the canvas; back clear of wall.
+  const frameWest = (fx, y0, z0, w, h) => {
+    mkBox(root, fx, y0 + h / 2 + FB / 2, z0, FD, FB, w + 2 * FB, M.timber, 'lg_portrait_frame'); // top
+    mkBox(root, fx, y0 - h / 2 - FB / 2, z0, FD, FB, w + 2 * FB, M.timber, 'lg_portrait_frame'); // bottom
+    mkBox(root, fx, y0, z0 - (w / 2 + FB / 2), FD, h, FB, M.timber, 'lg_portrait_frame');        // -z side
+    mkBox(root, fx, y0, z0 + (w / 2 + FB / 2), FD, h, FB, M.timber, 'lg_portrait_frame');        // +z side
+  };
+  // portraits spaced along z, all inside [-180,-140] with margin; centre y = 2.6
   const zs = [-172, -166, -158, -150, -144.5];
   for (let i = 0; i < zs.length; i++) {
     const w = 0.9 + (i % 2) * 0.15, h = 1.3 + (i % 3) * 0.12;
     const mat = M.portrait[i % M.portrait.length];
     const p = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat);
-    p.position.set(xw, 2.35, zs[i]);
-    p.rotation.y = Math.PI / 2;                    // face +X into the room
+    p.position.set(canvasX, cy, zs[i]);
+    p.rotation.y = Math.PI / 2;                    // +Z normal -> +X: front faces INTO the room
     p.name = 'lg_portrait';
     root.add(p);
-    // slim gilt frame edge (a thin box behind the plane)
-    mkBox(root, xw - 0.02, 2.35, zs[i], 0.06, h + 0.12, w + 0.12, M.brass, 'lg_portrait_frame');
+    frameWest(frameX, cy, zs[i], w, h);
   }
-  // a long faded verdure tapestry lower down the wall between two portraits
-  const tap = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 2.4), M.tapestry);
-  tap.position.set(xw, 1.7, -161.5);
-  tap.rotation.y = Math.PI / 2;
+  // a long faded verdure tapestry hung flat, proud of the wall, facing into the room
+  const tapW = 3.2, tapH = 2.4, tapZ = -161.5;
+  const tap = new THREE.Mesh(new THREE.PlaneGeometry(tapW, tapH), M.tapestry);
+  tap.position.set(XW + 0.05, 1.7, tapZ);          // 5 cm proud into the room
+  tap.rotation.y = Math.PI / 2;                    // faces +X into the room
   tap.name = 'lg_tapestry';
   root.add(tap);
-  mkBox(root, xw - 0.03, 3.0, -161.5, 0.06, 0.1, 3.4, M.timber, 'lg_tapestry_rail');
+  // an oak hanging rail proud along the top of the tapestry
+  mkBox(root, XW + 0.06, 1.7 + tapH / 2 + 0.06, tapZ, 0.1, 0.12, tapW + 0.2, M.timber, 'lg_tapestry_rail');
 
-  // two portraits on the far wall, flanking the clock bay (face +Z)
+  // Two portraits on the FAR wall, flanking the clock bay. Far wall inner face is
+  // at z = ZN_IN (-179.75); the room lies toward +Z. Mount proud, facing +Z.
+  const fCanvasZ = ZN_IN + 0.06;                   // 6 cm proud into the room
+  const fFrameZ = ZN_IN + 0.07;
+  const frameFar = (x0, y0, fz, w, h) => {
+    mkBox(root, x0, y0 + h / 2 + FB / 2, fz, w + 2 * FB, FB, FD, M.timber, 'lg_portrait_far_frame'); // top
+    mkBox(root, x0, y0 - h / 2 - FB / 2, fz, w + 2 * FB, FB, FD, M.timber, 'lg_portrait_far_frame'); // bottom
+    mkBox(root, x0 - (w / 2 + FB / 2), y0, fz, FB, h, FD, M.timber, 'lg_portrait_far_frame');        // -x side
+    mkBox(root, x0 + (w / 2 + FB / 2), y0, fz, FB, h, FD, M.timber, 'lg_portrait_far_frame');        // +x side
+  };
   for (const px of [-2.9, 2.9]) {
-    const q = new THREE.Mesh(new THREE.PlaneGeometry(0.95, 1.35), M.portrait[(px < 0 ? 2 : 4)]);
-    q.position.set(px, 2.4, ZN_IN + 0.03);
+    const fw = 0.95, fh = 1.35;
+    const q = new THREE.Mesh(new THREE.PlaneGeometry(fw, fh), M.portrait[(px < 0 ? 2 : 4)]);
+    q.position.set(px, 2.4, fCanvasZ);            // default +Z normal already faces the room
     q.name = 'lg_portrait_far';
     root.add(q);
-    mkBox(root, px, 2.4, ZN_IN + 0.01, 1.07, 1.47, 0.06, M.brass, 'lg_portrait_far_frame');
+    frameFar(px, 2.4, fFrameZ, fw, fh);
   }
 }
 

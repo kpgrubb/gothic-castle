@@ -11,6 +11,8 @@ import { buildApproachStory } from './areas/approach-story.js';
 import { SHOTS, applyShot, shotFromURL } from './core/shots.js';
 import { initArchitecture } from './architecture/index.js';
 import { initAtmosphere } from './atmosphere/index.js';
+import { createWeather } from './atmosphere/weather.js';
+import { createVermin } from './atmosphere/vermin.js';
 import { initInteraction } from './interaction/index.js';
 
 // ---------------------------------------------------------------------------
@@ -102,6 +104,12 @@ safeInit('approach', () => {
   world.registerZone({ name: 'The Inner Ward', min: [-18, -1, 16], max: [18, 8, 47.9] });
   world.registerZone({ name: 'The Gatehouse', min: [-9, -1, 47.9], max: [9, 14, 58] });
 });
+
+// ---- Outdoor weather (rain + circling vultures + sky/daylight for open-air
+// areas) and interior VERMIN (maggots + roaches near the dead). Both self-add
+// their meshes + one updater; safe-guarded so a failure never blanks the app.
+safeInit('weather', () => createWeather(world));
+safeInit('vermin', () => createVermin(world));
 
 // ---- Shot mode: deterministic static cameras for the verification loop ----
 const shotIdx = shotFromURL();
