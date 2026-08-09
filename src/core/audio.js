@@ -22,6 +22,16 @@ const MANIFEST = {
   bell:     'audio/bell.ogg',       // distant resonant toll (one-shot)
   whoosh:   'audio/whoosh.ogg',     // portal transition (one-shot) — for the atlas portals
   gate:     'audio/gate.ogg',       // door / gate close (one-shot) — future
+  // --- Envato atmosphere library (contextual beds + sfx) ---
+  rain:        'audio/rain.ogg',        // rain bed — outdoor zones
+  wind:        'audio/wind.ogg',        // spooky gusts — exteriors + towers
+  whispers:    'audio/whispers.ogg',    // eerie voices — crypt/ordinal/sounding/bridal
+  devils:      'audio/devils.ogg',      // devil's presence — the diabolical works
+  hallgods:    'audio/hallgods.ogg',    // vast sacred reverb — the nave/chancel/chapel
+  cryptRumble: 'audio/cryptrumble.ogg', // low earth rumble — the undercroft
+  dock:        'audio/dock.ogg',        // water + timber creak — the harbour
+  fire:        'audio/fire.ogg',        // crackle — positional at the lighthouse brazier
+  crow:        'audio/crow.ogg',        // a crow's caw (one-shot) — outdoors
 };
 
 export function createAudio(world) {
@@ -80,6 +90,25 @@ export function createAudio(world) {
     return a;
   }
 
+  // --- positional looping sources (attenuate with distance from the listener) ---
+  const positionals = [];
+  function positional(role, { pos = [0, 0, 0], volume = 1, refDistance = 6, rolloff = 1.6, loop = true } = {}) {
+    const a = new THREE.PositionalAudio(listener);
+    a.setRefDistance(refDistance);
+    if (a.setRolloffFactor) a.setRolloffFactor(rolloff);
+    a.setLoop(loop);
+    a.setVolume(volume);
+    a.position.set(pos[0], pos[1], pos[2]);
+    if (world.scene) world.scene.add(a);
+    positionals.push(a);
+    onReady(() => {
+      if (!buffers[role]) return;
+      a.setBuffer(buffers[role]);
+      if (unlocked && loop && !a.isPlaying) safe(() => a.play());
+    });
+    return a;
+  }
+
   // --- one-shots (non-positional; small reusable pool per role) ---
   const pool = {};
   function play(role, { volume = 1, rate = 1 } = {}) {
@@ -112,13 +141,14 @@ export function createAudio(world) {
     onReady,
     onUnlock(fn) { unlocked ? fn() : unlockCbs.push(fn); },
     setMaster(v) { listener.setMasterVolume(v); },
-    bed, play, footstep,
+    bed, play, footstep, positional,
     /** Resume the context on a user gesture and start any queued beds. Optimistic. */
     unlock() {
       if (unlocked) return;
       try { const p = ctx.resume(); if (p && p.catch) p.catch(() => {}); } catch (_) {}
       unlocked = true;
       for (const role in beds) { const a = beds[role]; if (a.buffer && !a.isPlaying) safe(() => a.play()); }
+      for (const a of positionals) { if (a.buffer && a.loop && !a.isPlaying) safe(() => a.play()); }
       for (const cb of unlockCbs.splice(0)) safe(cb);
     },
   };

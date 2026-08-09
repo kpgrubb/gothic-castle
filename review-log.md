@@ -496,3 +496,35 @@ weather skies unless the player is within 48 m of each. Verified: harbour grey s
 clean, Ordinal/Sounding clean, no bleed.
 
 20 zones, 60fps, 0 console errors, npm run build OK.
+
+---
+
+## Phase: Envato atmosphere audio (contextual) + Continue button
+
+Incorporated 9 downloaded Envato sounds, PS1-converted (ffmpeg → mono 16 kHz ogg,
+trimmed to ~40s loops) into public/audio/: rain, wind, whispers (eerie voices),
+devils (devil's presence), hallgods (Hall of Gods reverb), cryptrumble, dock (ferry
+dock), fire (crackle), crow.
+
+core/audio.js: added the 9 MANIFEST roles + a `positional(role,{pos,refDistance,...})`
+helper (PositionalAudio) and start positionals on unlock.
+
+atmosphere/audio.js: REWROTE initAudio as a ZONE-DRIVEN ambience mixer. Per-zone
+target volumes for 10 looping beds crossfade (~0.8s) on world.currentZone:
+- outdoors (ward/gate/cloister/hortus/harbour/court): rain + wind (+dock in harbour)
+- nave/chancel/chapel: hallgods (+hallBed)
+- undercroft: cryptRumble + cryptBed + whispers
+- diabolical works (tithe house, ordinal): devils + whispers
+- sounding court/bridal/galleries: whispers (the residue of what happened)
+Plus: the lighthouse BRAZIER as a POSITIONAL fire (swells as you climb the Brandturm);
+an occasional CROW one-shot while outdoors; the existing far bell + portal SFX kept.
+
+Verified (Playwright): audio.ready + unlocked, all 9 oggs load (no failures), the
+positional fire plays at (320,18,0), zone crossfade updater running. (Can't judge
+sound quality headless — worth an ear-check in a browser tab.)
+
+UI: added a prominent CONTINUE button to the pause menu (was confusing how to
+resume); wired to requestLock. Menu now: Continue / Enter Fullscreen / Restart.
+Held the footsteps pack (walking sound was removed earlier by request).
+
+npm run build OK. 0 console errors (favicon only).

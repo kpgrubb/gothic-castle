@@ -218,6 +218,11 @@ export function initInteraction(world) {
     location.reload();
   });
 
+  // Continue = resume play (same path as clicking the overlay) — an explicit
+  // button so it's clear how to get back in.
+  const continueBtn = document.getElementById('continue-btn');
+  if (continueBtn) continueBtn.addEventListener('click', (e) => { e.stopPropagation(); requestLock(); });
+
   // Pause toggle (P). Esc is owned by the browser — in an embedded preview it
   // only releases the cursor and can't reliably raise our menu — so P is the
   // real pause key: it shows the pause overlay (Restart / Fullscreen) and stops
