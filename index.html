@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Plague's End — Abandoned Gothic Castle</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+    #app { position: fixed; inset: 0; }
+    /* The renderer's drawing buffer is tiny; CSS stretches it with nearest-neighbor for the PS1 look. */
+    #app canvas {
+      width: 100% !important; height: 100% !important; display: block;
+      image-rendering: pixelated; image-rendering: crisp-edges;
+    }
+    #reticle { position: fixed; left: 50%; top: 50%; width: 3px; height: 3px;
+      margin: -1.5px 0 0 -1.5px; background: #fff; opacity: .5; pointer-events: none; }
+    #examine { position: fixed; left: 50%; bottom: 22%; transform: translateX(-50%);
+      color: #f2e6c8; font: 13px/1.4 monospace; background: rgba(0,0,0,.55);
+      padding: 6px 10px; border: 1px solid #4a3f2a; max-width: 56ch; text-align: center; display: none; }
+    #hud { position: fixed; left: 0; bottom: 0; color: #9a8f7a; font: 11px monospace;
+      padding: 6px 8px; pointer-events: none; text-shadow: 0 1px 2px #000; }
+    #prompt { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 10px; color: #ddd; font: 15px/1.5 monospace;
+      background: radial-gradient(circle at 50% 45%, rgba(20,16,12,.55), rgba(0,0,0,.85));
+      cursor: pointer; text-align: center; }
+    #prompt.hidden { display: none; }
+    #prompt .title { font-size: 22px; letter-spacing: 3px; color: #cbb89a; }
+    #prompt .sub { opacity: .7; font-size: 12px; }
+    #prompt button { margin-top: 16px; padding: 8px 18px; background: #1a1712; color: #cbb89a;
+      border: 1px solid #4a3f2a; font: 12px monospace; letter-spacing: 1px; cursor: pointer; }
+    #prompt button:hover { background: #2a231a; color: #e6d6b0; }
+    /* Reading overlay — a simple framed leaf over a darkened view. */
+    #reader { position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
+      background: rgba(0,0,0,.72); z-index: 10; }
+    #reader.open { display: flex; }
+    #reader .leaf { width: min(62ch, 86vw); max-height: 82vh; overflow: auto;
+      background: linear-gradient(#1a1712, #14110d); color: #d8c9a8;
+      border: 1px solid #4a3f2a; box-shadow: 0 0 0 1px #000, 0 20px 60px rgba(0,0,0,.6);
+      padding: 26px 30px; font: 15px/1.7 'Georgia', 'Times New Roman', serif; }
+    #reader .doc-meta { color: #8a7d63; font: 11px/1.5 monospace; letter-spacing: .5px;
+      text-transform: uppercase; border-bottom: 1px solid #3a3228; padding-bottom: 8px; margin-bottom: 14px; }
+    #reader .doc-body { white-space: pre-wrap; }
+    #reader .doc-body.chalk { font-family: 'Comic Sans MS', 'Segoe Print', cursive; color: #cfc7b6; }
+    #reader .doc-body.ledger, #reader .doc-body.tally, #reader .doc-body.roll { font-family: monospace; color: #cdbf9e; }
+    #reader .doc-nav { color: #7d7157; font: 11px monospace; margin-top: 16px; padding-top: 10px;
+      border-top: 1px solid #3a3228; display: flex; justify-content: space-between; }
+    #tally { position: fixed; right: 10px; bottom: 8px; color: #7d7157; font: 11px monospace;
+      text-shadow: 0 1px 2px #000; pointer-events: none; display: none; }
+    /* Portal transition fade (threshold -> black -> arrive). */
+    #fade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none;
+      transition: opacity .35s ease; z-index: 20; }
+    #fade.on { opacity: 1; }
+    /* Zone title — announces the room on entry (fade in, hold ~2s, fade out). */
+    #zone { position: fixed; top: 7%; left: 50%; transform: translateX(-50%);
+      color: #e6d9bb; font: 18px/1.4 'Georgia', 'Times New Roman', serif; letter-spacing: 4px;
+      text-transform: uppercase; padding: 5px 20px; background: rgba(8,7,5,0.45);
+      text-shadow: 0 0 4px #000, 0 1px 3px #000; opacity: 0;
+      transition: opacity .55s ease; pointer-events: none; z-index: 12; white-space: nowrap; }
+    #zone.on { opacity: 1; }
+    /* Intro — the conceit, shown on first entry and on Restart. */
+    #intro { position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
+      background: radial-gradient(circle at 50% 38%, rgba(20,16,12,.86), rgba(0,0,0,.97)); z-index: 15; }
+    #intro.show { display: flex; }
+    #intro .scroll { width: min(58ch, 84vw); color: #d3c4a3;
+      font: 16px/1.8 'Georgia', 'Times New Roman', serif; text-align: left; padding: 10px; }
+    #intro .scroll .t { display: block; text-align: center; font: 22px/1 monospace; letter-spacing: 5px;
+      color: #cbb89a; margin-bottom: 26px; text-transform: uppercase; }
+    #intro p { margin: 0 0 15px; }
+    #intro button { display: block; margin: 30px auto 0; padding: 10px 22px; background: #1a1712;
+      color: #cbb89a; border: 1px solid #4a3f2a; font: 13px monospace; letter-spacing: 1px; cursor: pointer; }
+    #intro button:hover { background: #2a231a; color: #e6d6b0; }
+    /* Automap overlay — semi-transparent node graph, toggled with M (game runs underneath). */
+    #map { position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
+      background: radial-gradient(circle at 50% 45%, rgba(10,11,13,.72), rgba(2,3,4,.9));
+      z-index: 14; pointer-events: none; }
+    #map.on { display: flex; }
+    #map .frame { position: relative; width: min(78vh, 92vw); aspect-ratio: 1 / 1;
+      background: rgba(8,10,12,.55); border: 1px solid #3a4048;
+      box-shadow: 0 0 0 1px #000, 0 12px 48px rgba(0,0,0,.6); }
+    /* faint scanline dither over the panel */
+    #map .frame::after { content: ''; position: absolute; inset: 0; pointer-events: none;
+      background: repeating-linear-gradient(0deg, rgba(0,0,0,.18) 0 1px, transparent 1px 3px); opacity: .5; }
+    #map .head { position: absolute; top: 10px; left: 14px; right: 14px; display: flex;
+      justify-content: space-between; align-items: baseline;
+      color: #aeb6bf; font: 12px/1.3 monospace; letter-spacing: 2px; text-transform: uppercase; }
+    #map .head .cur { color: #e8edf2; }
+    #map .hint { color: #6b727a; font: 11px monospace; letter-spacing: 1px; }
+    #map svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+    /* edges */
+    #map .edge { stroke: #444b53; stroke-width: .04; fill: none; }
+    #map .edge.exit { stroke: #cf6b3a; stroke-width: .07; }
+    #map .edge.level { stroke-dasharray: .18 .12; }
+    /* node boxes + labels drawn in SVG */
+    #map .nbox { fill: #14171b; stroke: #4a525b; stroke-width: .035; }
+    #map .nlabel { fill: #9aa2ab; font: .19px 'Georgia','Times New Roman',serif;
+      text-anchor: middle; dominant-baseline: middle; }
+    /* visited (normal) already covered by defaults above */
+    #map .node.current .nbox { fill: #4a3b1c; stroke: #e6d6b0; stroke-width: .07; }
+    #map .node.current .nlabel { fill: #f4ead0; }
+    #map .node.exit .nbox { fill: #2a1c12; stroke: #cf6b3a; stroke-width: .06; }
+    #map .node.exit .nlabel { fill: #e6a074; }
+    #map .node.unknown .nbox { fill: #0d0f11; stroke: #2a2f35; }
+    #map .node.unknown .nlabel { fill: #4b525a; }
+    #map .tick { fill: #cf6b3a; font: .16px monospace; text-anchor: middle; dominant-baseline: middle; }
+  </style>
+  <script type="module" crossorigin src="./assets/index-9kGA5H_e.js"></script>
+</head>
+<body>
+  <div id="app"></div>
+  <div id="fade"></div>
+  <div id="reticle"></div>
+  <div id="examine"></div>
+  <div id="hud"></div>
+  <div id="zone"></div>
+  <div id="tally"></div>
+  <div id="reader">
+    <div class="leaf">
+      <div class="doc-meta" id="reader-meta"></div>
+      <div class="doc-body" id="reader-body"></div>
+      <div class="doc-nav"><span id="reader-page"></span><span id="reader-hint"></span></div>
+    </div>
+  </div>
+  <div id="map"></div>
+  <div id="prompt">
+    <div class="title">PLAGUE'S END</div>
+    <div class="sub">WASD move &middot; mouse look &middot; E read / examine &middot; P pause / menu</div>
+    <div style="display:flex;gap:10px;align-items:center">
+      <button id="continue-btn" type="button" style="background:#2a231a;color:#e6d6b0;border-color:#6a5a38">Continue</button>
+      <button id="fs-btn" type="button">Enter Fullscreen</button>
+      <button id="restart-btn" type="button">Restart</button>
+    </div>
+  </div>
+  <div id="intro">
+    <div class="scroll">
+      <span class="t">Plague's End</span>
+      <p>You are a scout, put ashore below the town and sent up to the castle alone.</p>
+      <p>For a year the Hochmauer paid its dues and answered its letters. Then the letters stopped &mdash; no tithe, no muster, no word of any kind, to your lord or to anyone. He means to know why a whole kingdom has gone quiet.</p>
+      <p>The gate stood open when you came up the road. No one came down to meet you.</p>
+      <p>Go in. Find out what happened here, and write it down.</p>
+      <button id="intro-begin" type="button">Begin your watch</button>
+    </div>
+  </div>
+</body>
+</html>
