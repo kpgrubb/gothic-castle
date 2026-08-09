@@ -7,6 +7,11 @@ import { buildKeep } from './keep.js';
 import { buildChapel } from './chapel.js';
 import { buildLongGallery } from './long-gallery.js';
 import { buildHortus } from './hortus.js';
+import { buildHarbour } from './harbour.js';
+import { buildGuildHall } from './guild-hall.js';
+import { buildBridalHall } from './bridal-hall.js';
+import { buildSoundingCourt } from './sounding-court.js';
+import { buildOrdinal } from './ordinal.js';
 import { registerPortal } from '../core/scene.js';
 
 // ---------------------------------------------------------------------------
@@ -25,10 +30,10 @@ function doorMats() {
   };
   return _doorMats;
 }
-function doorPortal(world, { x, z, faceYaw = 0, w = 1.35, h = 2.45, label, target, stand = 1.15 }) {
+function doorPortal(world, { x, z, y = 0, faceYaw = 0, w = 1.35, h = 2.45, label, target, stand = 1.15 }) {
   const M = doorMats();
   const g = new THREE.Group();
-  g.position.set(x, 0, z);
+  g.position.set(x, y, z);                     // `y` = the floor the door stands on (e.g. -6 in the crypt)
   g.rotation.y = faceYaw;                     // local +Z is the door's front
   const jamb = new THREE.BoxGeometry(0.28, h, 0.4);
   const lJ = new THREE.Mesh(jamb, M.frame); lJ.position.set(-(w / 2 + 0.14), h / 2, 0); g.add(lJ);
@@ -42,7 +47,7 @@ function doorPortal(world, { x, z, faceYaw = 0, w = 1.35, h = 2.45, label, targe
   // portal anchor: `stand` metres out in front of the door along its normal
   const ax = x + Math.sin(faceYaw) * stand;
   const az = z + Math.cos(faceYaw) * stand;
-  registerPortal({ pos: [ax, 1.0, az], radius: 1.5, label, target });
+  registerPortal({ pos: [ax, y + 1.0, az], radius: 1.5, label, target });
 }
 
 // ===========================================================================
@@ -68,6 +73,11 @@ export function initAreas(world) {
   ensureInScene(world, buildChapel(world));
   ensureInScene(world, buildLongGallery(world));
   ensureInScene(world, buildHortus(world));
+  ensureInScene(world, buildHarbour(world));
+  ensureInScene(world, buildGuildHall(world));
+  ensureInScene(world, buildBridalHall(world));
+  ensureInScene(world, buildSoundingCourt(world));
+  ensureInScene(world, buildOrdinal(world));
 
   // Zone titles for the older areas (the newer ones register their own).
   world.registerZone({ name: 'The Tithe House', min: [94, -1, -12], max: [106, 6, 12] });
@@ -116,6 +126,32 @@ export function initAreas(world) {
     target: { x: 150, y: 1.7, z: 108, yaw: Math.PI } });
   registerPortal({ pos: [150, 1.0, 108.9], radius: 1.5, label: 'Back to the ward.  [E]',
     target: { x: 16.75, y: 1.7, z: 40, yaw: -Math.PI / 2 } });
+
+  // A second rank of ward doorways for the newest wings — Harbour + Sounding
+  // Court on the west curtain, Guild Hall + Bridal Hall on the east.
+  doorPortal(world, { x: -17.9, z: 16, faceYaw: Math.PI / 2, label: 'A stair down to the harbour.  [E]',
+    target: { x: 210, y: 4.3, z: 0, yaw: Math.PI / 2 } });
+  registerPortal({ pos: [207, 3.6, 0], radius: 1.9, label: 'Back up to the ward.  [E]',
+    target: { x: -16.75, y: 1.7, z: 16, yaw: Math.PI / 2 } });
+  doorPortal(world, { x: -17.9, z: 46, faceYaw: Math.PI / 2, label: 'A door to the sounding court.  [E]',
+    target: { x: 0, y: 1.7, z: 188, yaw: 0 } });
+  registerPortal({ pos: [0, 1.0, 187.0], radius: 1.5, label: 'Back to the ward.  [E]',
+    target: { x: -16.75, y: 1.7, z: 46, yaw: Math.PI / 2 } });
+  doorPortal(world, { x: 17.9, z: 16, faceYaw: -Math.PI / 2, label: 'A door to the guild hall.  [E]',
+    target: { x: 200, y: 1.7, z: -88, yaw: Math.PI } });
+  registerPortal({ pos: [200, 1.0, -86.9], radius: 1.5, label: 'Back to the ward.  [E]',
+    target: { x: 16.75, y: 1.7, z: 16, yaw: -Math.PI / 2 } });
+  doorPortal(world, { x: 17.9, z: 46, faceYaw: -Math.PI / 2, label: 'A door to the bridal hall.  [E]',
+    target: { x: -200, y: 1.7, z: -88, yaw: Math.PI } });
+  registerPortal({ pos: [-200, 1.0, -86.9], radius: 1.5, label: 'Back to the ward.  [E]',
+    target: { x: 16.75, y: 1.7, z: 46, yaw: -Math.PI / 2 } });
+
+  // The Ordinal opens off the UNDERCROFT (crypt, floor y=-6) — a low brick
+  // doorway in the crypt's south wall (canon: #16 → Undercroft).
+  doorPortal(world, { x: 0, z: -2.9, y: -6, faceYaw: Math.PI, h: 2.2, label: 'A low brick doorway.  [E]',
+    target: { x: -160, y: 1.7, z: -14, yaw: 0 } });
+  registerPortal({ pos: [-160, 1.0, -15.0], radius: 1.5, label: 'Back to the crypt.  [E]',
+    target: { x: 0, y: -4.3, z: -4.5, yaw: Math.PI } });
 }
 
 // Some area builders add their root to world.scene themselves; some return it.

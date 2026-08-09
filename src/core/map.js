@@ -35,6 +35,12 @@ const NODES = {
   'The Hortus Clausus':  { x: -2.5, y: 4.2 },
   'The Keep':            { x: -2.5, y: 5.0 },
   "St. Ursel's Chapel":  { x: -2.5, y: 5.8 },
+  // Latest wings — fanned below the ward.
+  'The Harbour':         { x: -1.9, y: 7.1 },
+  'The Sounding Court':  { x: -3.7, y: 6.7 },
+  'The Guild Hall':      { x: 1.9,  y: 7.1 },
+  'The Bridal Hall':     { x: 3.7,  y: 6.7 },
+  'The Ordinal':         { x: 2.3,  y: -0.5 },   // down off the Undercroft
 };
 
 const EDGES = [
@@ -52,6 +58,11 @@ const EDGES = [
   ['The Inner Ward',  "St. Ursel's Chapel"],
   ['The Inner Ward',  'The Long Gallery'],
   ['The Inner Ward',  'The Hortus Clausus'],
+  ['The Inner Ward',  'The Harbour'],
+  ['The Inner Ward',  'The Sounding Court'],
+  ['The Inner Ward',  'The Guild Hall'],
+  ['The Inner Ward',  'The Bridal Hall'],
+  ['The Undercroft',  'The Ordinal'],
 ];
 
 // Edges that cross a floor level — rendered dashed with a ↓ hint on the node.
@@ -61,7 +72,7 @@ const START = 'The Gatehouse';   // the scout arrives at the gate — seed it vi
 
 const NODE_W = 1.7;
 const NODE_H = 0.46;
-const VIEWBOX = '-4.3 -0.1 9.6 6.8';
+const VIEWBOX = '-4.8 -0.1 9.8 7.9';
 
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 

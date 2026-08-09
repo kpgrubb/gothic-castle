@@ -33,6 +33,8 @@ const REGIONS = [
   { c: new THREE.Vector3(0, 0, 36), r: 28, sky: false },                     // Inner Ward (approach owns sky+light)
   { c: new THREE.Vector3(100, 0, -100), r: 15, sky: true, hemiT: 0.80, dirT: 0.24 }, // Cloister (was dark)
   { c: new THREE.Vector3(150, 0, 100), r: 15, sky: true, hemiT: 0.52, dirT: 0.16 },  // Hortus (light lift)
+  { c: new THREE.Vector3(270, 0, 0), r: 70, sky: false },                    // Harbour (builds its own sky/sea)
+  { c: new THREE.Vector3(0, 0, 200), r: 16, sky: false },                    // Sounding Court (builds its own sky)
 ];
 
 // --- rain tuning -----------------------------------------------------------

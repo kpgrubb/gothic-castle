@@ -459,3 +459,40 @@ Verified (Playwright): ward shows rain + 2 vultures + detailed walls; cloister i
 daylit rainy garth; vermin scattered by the cloister dead (365+23 instanced); gallery
 portrait + tapestry hang flat head-on. 60fps, lights 46->85, colliders ->265, 0
 console errors (favicon only). npm run build OK.
+
+---
+
+## Phase: 5 new connected wings (incl. the ambitious Harbour) + sky-bleed fix
+
+Five self-contained island areas (agents), wired by the integrator. World now 20 zones.
+- THE HARBOUR & BRANDTURM (harbour.js) — the ambitious one. Heaving 560×440 sea
+  (vertex waves), own sky + sea-fog, 3 boats (moored/half-sunk/capsized on rocks),
+  quay gear (capstan/derrick/crates/barrels/nets), and a CLIMBABLE lighthouse
+  (Nordturm helical-ramp trick, base y0→lantern y17, verified floor-follow holds)
+  crowned by the BRAZIER STILL LIT (warm point-light, Krug's body + log, §7.4).
+  Off the ward (west z16). Verified: reveal + climb + lit lantern.
+- THE ORDINAL (ordinal.js) — 6 concentric brick rings funnelling to a SEALED drum;
+  438 ring-post colliders make every ring a continuous barrier yet you can circle
+  right up to the centre (no way in). Off the CRYPT (crypt south wall, y-6 door).
+- THE GUILD HALL (guild-hall.js) — work stopped mid-task; Ochs at his anvil, Krieg's
+  guild roll (Payment III). Off the ward (east z16).
+- THE BRIDAL HALL (bridal-hall.js) — a wedding feast never held; tables laid, chairs
+  never drawn, collapsed cake, great doors barred from outside, empty keyhole, no
+  key, seven scratch-marks inside. Off the ward (east z46).
+- THE SOUNDING COURT (sounding-court.js) — elliptical whispering-gallery, standing
+  stone at the true centre but the acoustic figure cut OFF-centre (the voice returns
+  wrong). Own sky. Off the ward (west z46).
+
+Integration: doorPortal gained a floor-Y param (crypt door at y-6); 5 ward/crypt
+doorways + returns; 5 BOUNDS rects; 5 map nodes (+Undercroft→Ordinal edge, rest off
+the Inner Ward); Harbour + Sounding added to weather REGIONS (rain + vultures).
+
+SKY-BLEED FIX: large fog:false sky boxes live in one shared scene with no inter-area
+occlusion, so from far islands they bled in as pale panels (and the harbour's huge
+static sky exceeded the 220 far plane → black). Fixes: har_sky is now CAMERA-FOLLOWING
+(sized to fit 220, gated to x>200) with fog far 185→128; appr_sky gated to the castle
+core; a central skygate updater in main.js hides snd_sky + the two cloister/hortus
+weather skies unless the player is within 48 m of each. Verified: harbour grey sky
+clean, Ordinal/Sounding clean, no bleed.
+
+20 zones, 60fps, 0 console errors, npm run build OK.

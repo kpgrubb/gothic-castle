@@ -111,6 +111,24 @@ safeInit('approach', () => {
 safeInit('weather', () => createWeather(world));
 safeInit('vermin', () => createVermin(world));
 
+// ---- Sky-box region gate. Large static area sky boxes (fog:false) live in one
+// shared scene with no inter-area occlusion, so from a far-off island they bleed
+// into view as pale panels. Show each only when the player is near its own
+// region. (appr_sky self-gates in approach.js; har_sky is camera-following.)
+safeInit('skygate', () => {
+  const skies = [];
+  scene.traverse((o) => {
+    if (o.isMesh && (o.name === 'snd_sky' || o.name === 'weather_sky')) {
+      const c = new THREE.Box3().setFromObject(o).getCenter(new THREE.Vector3());
+      skies.push({ mesh: o, cx: c.x, cz: c.z });
+    }
+  });
+  if (skies.length) world.updaters.push(() => {
+    const p = camera.position;
+    for (const s of skies) s.mesh.visible = Math.hypot(p.x - s.cx, p.z - s.cz) < 48;
+  });
+});
+
 // ---- Shot mode: deterministic static cameras for the verification loop ----
 const shotIdx = shotFromURL();
 const shotMode = shotIdx >= 0;

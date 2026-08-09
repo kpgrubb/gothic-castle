@@ -223,9 +223,17 @@ export function buildApproach(world) {
   buildWard(root, M);
   buildGatehouse(root, M);
   buildFloors(root, M);
-  buildSky(root);
+  const apprSky = buildSky(root);
   const rig = buildDaylight(world);
   buildFogAndDaylightSwap(world, rig);
+  // The approach sky is large and fog:false, so from far-off islands it would
+  // bleed into view (one shared scene, no inter-area occlusion). Show it only
+  // around the castle core + approach.
+  onUpdate(() => {
+    const c = world.camera; if (!c || !apprSky) return;
+    const p = c.position;
+    apprSky.visible = p.x > -45 && p.x < 45 && p.z > -25 && p.z < 62;
+  });
 
   return root;
 }

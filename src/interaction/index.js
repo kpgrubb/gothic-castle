@@ -68,6 +68,11 @@ const BOUNDS = [
   { x0: -106, x1: -94, z0: 90, z1: 110 }, // St. Ursel's Chapel
   { x0: -5, x1: 5, z0: -181, z1: -139 }, // The Long Gallery
   { x0: 139, x1: 161, z0: 91, z1: 109 }, // The Hortus Clausus
+  { x0: 205, x1: 333, z0: -32, z1: 32 }, // The Harbour (+ lighthouse)
+  { x0: 190, x1: 210, z0: -114, z1: -86 }, // The Guild Hall
+  { x0: -208, x1: -192, z0: -109, z1: -86 }, // The Bridal Hall
+  { x0: -14, x1: 14, z0: 187, z1: 213 }, // The Sounding Court
+  { x0: -176, x1: -144, z0: -16, z1: 16 }, // The Ordinal
   // The arrival procession south of the hall (Inner Ward + Gatehouse), seamless:
   { x0: -18, x1: 18, z0: 15, z1: 58 },
 ];
