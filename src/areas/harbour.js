@@ -3,6 +3,7 @@ import { ps1ify, crunch } from '../core/ps1.js';
 import {
   registerCollider, registerFloor, registerInteractable, addLight, onUpdate,
 } from '../core/scene.js';
+import { makeCorpse, makeStain } from '../content/corpse.js';
 
 // ===========================================================================
 // THE HARBOUR & THE BRANDTURM  (world-bible §2/§3 · §7.4 · castle-atlas rows
@@ -786,18 +787,17 @@ function buildLanternRoom(world, root, M) {
   });
 
   // --- KRUG — the keeper, slumped against the landward pier, and his last log ---
+  // Shared low-poly corpse, seated/slumped on the lantern floor (y=17) with his
+  // back to the landward pier, legs and head fallen forward toward the brazier.
   const kx = BX + (R_IN - 0.6) * Math.cos(DOOR_A), kz = BZ + (R_IN - 0.6) * Math.sin(DOOR_A);
-  const body = new THREE.Group(); body.position.set(kx, LANT_Y, kz); body.rotation.y = -DOOR_A; body.name = 'har_bt_krug'; root.add(body);
-  const bx = (w, h, d, mat, x, y, z, rx = 0) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); m.rotation.x = rx; body.add(m); };
-  bx(0.5, 0.7, 0.4, M.cloth, 0, 0.45, 0.1, 0.3);           // torso propped against the pier
-  bx(0.22, 0.2, 0.22, M.bone, 0, 0.9, 0.28, 0.5);          // head lolled forward
-  bx(0.5, 0.35, 0.7, M.cloth, 0, 0.18, 0.35);              // legs out along the floor
-  bx(0.12, 0.5, 0.12, M.cloth, -0.28, 0.3, 0.4, 0.8);      // an arm fallen across the lap
-  bx(0.12, 0.09, 0.12, M.black, -0.3, 0.08, 0.62);         // blackened hand at the wrist
-  bx(0.12, 0.09, 0.12, M.black, 0.28, 0.08, 0.6);          // the other, black to the knuckle
+  const krug = makeCorpse({ pose: 'slumped', cloth: 0x40382a, seed: 31 });
+  krug.position.set(kx, LANT_Y, kz); krug.rotation.y = 0; krug.name = 'har_bt_krug'; root.add(krug);
+  // a small dark-brown stain pooled under him on the lantern floor
+  const kstain = makeStain({ r: 0.9, seed: 32 });
+  kstain.position.set(kx, LANT_Y + 0.002, kz); root.add(kstain);
   // the log — a small board/book laid open on the floor by his hand (examinable anchor)
   const log = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.05, 0.24), M.timber);
-  log.position.set(kx - 0.5, LANT_Y + 0.03, kz + 0.6); log.name = 'har_bt_log'; root.add(log);
+  log.position.set(kx + 0.35, LANT_Y + 0.03, kz + 0.28); log.name = 'har_bt_log'; root.add(log);
 }
 
 // TALL invisible containment ring (door gap only). Because the collision band is
@@ -820,21 +820,16 @@ function buildTowerColliders(cols) {
 // stain scrubbed at), dead flies drifted in the lee of the crates, lime dusted
 // at the stair head. The sea took no one away. Everything GROUNDED on y=0.
 function buildPlagueGrammar(root, M) {
-  // a fallen dock-hand on the apron near the stair foot
-  const body = (cx, cz, ry) => {
-    const g = new THREE.Group(); g.position.set(cx, 0, cz); g.rotation.y = ry; root.add(g);
-    const bx = (w, h, d, mat, x, y, z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); g.add(m); };
-    bx(0.5, 0.24, 1.3, M.cloth, 0, 0.14, 0);       // torso + legs, prone
-    bx(0.22, 0.18, 0.22, M.bone, 0, 0.12, 0.8);    // head
-    bx(0.5, 0.14, 0.4, M.cloth, 0, 0.1, -0.6);     // hips
-    bx(0.12, 0.1, 0.12, M.black, 0.34, 0.06, 0.5); // blackened hand
-    bx(0.1, 0.1, 0.12, M.black, -0.02, 0.06, 1.0); // blackened foot/ankle showing
-    // dark stain + a scrubbed pale patch beside it (someone tried, once)
-    const st = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.0), M.stain);
-    st.rotation.x = -Math.PI / 2; st.position.set(0, 0.02, 0.2); g.add(st);
+  // two fallen dock-hands on the quay deck (y=0) — shared low-poly corpses,
+  // weather-worn cloth, each in a generous dark-brown plague stain.
+  const fallen = (cx, cz, yaw, pose, seed) => {
+    const c = makeCorpse({ pose, cloth: 0x40382a, seed });
+    c.position.set(cx, DECK_Y, cz); c.rotation.y = yaw; c.name = 'har_corpse'; root.add(c);
+    const st = makeStain({ r: 1.3, seed: seed + 1 });
+    st.position.set(cx, DECK_Y + 0.002, cz); root.add(st);
   };
-  body(228, -6, D2R(20));
-  body(272, 3.5, D2R(-70));    // a second, out on the mole by the crates
+  fallen(228, -6, D2R(20), 'facedown', 11);      // near the stair foot
+  fallen(272, 3.5, D2R(-70), 'supine', 13);      // a second, out on the mole by the crates
 
   // LIME dusted at the stair head (the sea took no one away — they limed instead)
   for (const [x, z, s] of [[224, 3, 1.4], [226, -2, 1.1], [222, 0.5, 0.9]]) {

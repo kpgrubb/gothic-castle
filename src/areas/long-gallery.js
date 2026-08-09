@@ -3,6 +3,7 @@ import { ps1ify, crunch } from '../core/ps1.js';
 import {
   registerCollider, registerFloor, registerInteractable, addLight, onUpdate,
 } from '../core/scene.js';
+import { makeCorpse, makeStain } from '../content/corpse.js';
 
 // ===========================================================================
 // THE LONG GALLERY  (atlas #10 — the Gallery cluster, Gen 6 Dietrich. "Ancestral:
@@ -599,21 +600,14 @@ function buildFurniture(root, M) {
 // pooled and scrubbed at beneath him. Plague grammar; grounded flat.
 function buildWatcher(root, M) {
   const cx = 0.5, cz = CASE_FRONT + 2.6;               // a few metres before the clock
-  // slumped seated torso, leaning back toward -X, head lolled
-  mkBox(root, cx, 0.42, cz, 0.5, 0.62, 0.32, M.garb, 'lg_watch_torso').rotation.x = 0.35;
-  mkBox(root, cx - 0.05, 0.78, cz - 0.18, 0.24, 0.24, 0.24, M.flesh, 'lg_watch_head');
-  // legs out toward the clock (-Z)
-  mkBox(root, cx - 0.12, 0.1, cz - 0.5, 0.16, 0.16, 0.7, M.garb, 'lg_watch_leg');
-  mkBox(root, cx + 0.14, 0.1, cz - 0.48, 0.16, 0.16, 0.66, M.garb, 'lg_watch_leg');
-  // blackened feet (toward the clock) and one hand fallen in the lap
-  mkBox(root, cx - 0.12, 0.08, cz - 0.9, 0.14, 0.1, 0.16, M.black, 'lg_watch_foot');
-  mkBox(root, cx + 0.14, 0.08, cz - 0.86, 0.14, 0.1, 0.16, M.black, 'lg_watch_foot');
-  mkBox(root, cx + 0.24, 0.3, cz + 0.02, 0.12, 0.1, 0.12, M.black, 'lg_watch_hand');
-  // arm resting along the side
-  mkBox(root, cx + 0.26, 0.4, cz - 0.12, 0.1, 0.1, 0.42, M.garb, 'lg_watch_arm');
+  // Shared low-poly corpse, slumped seated on the flags (y=0), facing the clock
+  // (-Z) with legs stretched toward the bay. Fine, dark garment.
+  const c = makeCorpse({ pose: 'slumped', cloth: 0x33302a, seed: 7 });
+  c.position.set(cx, 0, cz); c.rotation.y = Math.PI / 2; c.name = 'lg_watcher'; root.add(c);
 
-  // dark stain pooled under him, and a paler patch scrubbed at (not out)
-  flatQuad(root, M.stain, cx, 0.021, cz + 0.1, 1.0, 0.8, 'lg_watch_stain', 0.2);
+  // a generous dark-brown stain pooled around him, and a paler patch scrubbed at
+  const stain = makeStain({ r: 1.2, seed: 8 });
+  stain.position.set(cx, 0.002, cz); root.add(stain);
   flatQuad(root, M.scrub, cx - 0.5, 0.022, cz + 0.5, 0.6, 0.5, 'lg_watch_scrub', -0.3);
 }
 

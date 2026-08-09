@@ -3,6 +3,7 @@ import { ps1ify, crunch } from '../core/ps1.js';
 import {
   registerCollider, registerFloor, registerInteractable, addLight, onUpdate,
 } from '../core/scene.js';
+import { makeCorpse, makeStain } from '../content/corpse.js';
 
 // ===========================================================================
 // THE GUILD HALL  (atlas #20 — Gen 4, Albrecht II: "the guild quarter, the
@@ -575,30 +576,17 @@ function buildForge(root, M) {
 // of a brush that gave out beside it. Crude merged box-figure, grounded.
 const OCHS = { cx: X1 - 3.7, cz: ZS - 2.6, dir: -1, surf: 0 };   // by the anvil
 
-function pushFigure(F, G, B, b) {
-  const { cx, cz, dir, surf } = b;
-  const put = (arr, u, v, yy, along, h, across) => pushBox(arr, cx + dir * v, surf + yy, cz + u, across, h, along);
-  put(G, -0.02, 0, 0.13, 0.66, 0.22, 0.42);           // torso
-  put(F, 0.52, dir * 0.05, 0.12, 0.24, 0.22, 0.22);   // head, lolled
-  put(F, 0.30, 0.24, 0.06, 0.5, 0.10, 0.10);          // arm, flung
-  put(F, 0.28, -0.22, 0.06, 0.48, 0.10, 0.10);        // arm, at side
-  put(B, 0.55, 0.24, 0.05, 0.12, 0.10, 0.10);         // hand, black
-  put(B, 0.52, -0.22, 0.05, 0.12, 0.10, 0.10);        // hand, black
-  put(F, -0.42, 0.11, 0.07, 0.56, 0.13, 0.13);        // leg
-  put(F, -0.40, -0.13, 0.07, 0.54, 0.13, 0.13);       // leg, askew
-  put(B, -0.72, 0.11, 0.05, 0.14, 0.10, 0.10);        // foot, black
-  put(B, -0.70, -0.13, 0.05, 0.14, 0.10, 0.10);       // foot, black
-}
 function buildBody(root, M) {
-  const F = [], G = [], B = [];
-  pushFigure(F, G, B, OCHS);
-  mergedMesh(root, F, M.flesh, 'guild_body_flesh');
-  mergedMesh(root, G, M.garb, 'guild_body_garb');
-  mergedMesh(root, B, M.black, 'guild_body_black');
+  // Werner Ochs — shared low-poly corpse, fallen on his side where he worked,
+  // between the anvil and the cold forge (y=0). Head toward +Z, leather apron.
+  const c = makeCorpse({ pose: 'side', cloth: 0x4a3b28, seed: 17 });
+  c.position.set(OCHS.cx, OCHS.surf, OCHS.cz); c.rotation.y = -Math.PI / 2; c.name = 'guild_body'; root.add(c);
   // the smith's leather apron cast to one side
   addBox(root, M.linen, OCHS.cx + 0.5, 0.05, OCHS.cz + 0.4, 0.7, 0.04, 0.9, 'guild_apron', false, 0, 0.3, 0);
-  // the stain, and the brush that gave out beside it
-  flatQuad(root, M.stain, OCHS.cx, 0.02, OCHS.cz, 0.9, 1.5, 'guild_stain', 0.2);
+  // a generous dark-brown stain worked into the flags, the brush that gave out
+  // beside it, and the pale scrub marks that ring it
+  const stain = makeStain({ r: 1.2, seed: 18 });
+  stain.position.set(OCHS.cx, OCHS.surf + 0.002, OCHS.cz); root.add(stain);
   for (const s of [-1, 1]) flatQuad(root, M.scrub, OCHS.cx + s * 0.6, 0.021, OCHS.cz + 0.2, 0.16, 0.8, 'guild_scrub');
   addBox(root, M.timberDk, OCHS.cx + 0.75, 0.05, OCHS.cz - 0.3, 0.06, 0.05, 0.3, 'guild_brush', false, 0, 0.6, 0);
 }

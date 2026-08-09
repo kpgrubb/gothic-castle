@@ -3,6 +3,7 @@ import { ps1ify, crunch } from '../core/ps1.js';
 import {
   registerCollider, registerFloor, registerInteractable, addLight, onUpdate,
 } from '../core/scene.js';
+import { makeCorpse, makeStain } from '../content/corpse.js';
 
 // ===========================================================================
 // THE INFIRMARY  (self-contained island area — world-bible §8 CORPSE DOCTRINE
@@ -312,40 +313,25 @@ const FLOOR_BODIES = [
   { x: -101.5, z: 4.5,  axis: 'x', surf: 0, i: 4 },
 ];
 
-// Append one crude corpse to the shared flesh / gown / black vertex arrays.
-// Head lies toward -u (the wall end on a bed); u runs head→foot, v runs across.
-function pushCorpse(F, G, B, ax, az, surfY, axis, i) {
-  const side  = (i % 2) ? 1 : -1;
-  const splay = 0.02 + 0.03 * (i % 3);        // an arm falling to the side
-  const loll  = ((i % 2) ? 1 : -1) * 0.05;    // head lolled to one side
-  const bend  = (i % 4 === 0) ? 0.12 : 0.0;   // one knee drawn up
-  // local (u along body, v across) → world box, matched to the body's axis
-  const put = (arr, u, v, y, along, across, h) => {
-    if (axis === 'x') pushBox(arr, ax + u, y, az + v, along, h, across);
-    else              pushBox(arr, ax + v, y, az + u, across, h, along);
-  };
-  const armOut = -(0.24 + splay) * (side > 0 ? 1.4 : 1.0);
-  put(F, -0.60, loll, surfY + 0.10, 0.24, 0.24, 0.20);              // head
-  put(G, -0.12, 0,    surfY + 0.11, 0.70, 0.40, 0.22);             // torso / gown
-  put(F, -0.05,  (0.24 + splay), surfY + 0.05, 0.55, 0.10, 0.10);  // arm, at side
-  put(F, -0.05,  armOut,         surfY + 0.05, 0.55, 0.10, 0.10);  // arm, flung out
-  put(B,  0.24,  (0.24 + splay), surfY + 0.045, 0.12, 0.10, 0.08); // hand, blackened
-  put(B,  0.24,  armOut,         surfY + 0.045, 0.12, 0.10, 0.08); // hand, blackened
-  put(F,  0.45,          0.10,         surfY + 0.065, 0.60, 0.13, 0.13); // leg
-  put(F,  0.45 - bend, -0.10 - bend,   surfY + 0.065, 0.60 - bend, 0.13, 0.13); // leg, knee up
-  put(B,  0.80,          0.10,         surfY + 0.045, 0.14, 0.12, 0.08); // foot, blackened
-  put(B,  0.80 - 2 * bend, -0.10 - bend, surfY + 0.045, 0.14, 0.12, 0.08); // foot, blackened
-  // three dried streaks from the face, dark — running down toward the chin
-  for (const dv of [-0.05, 0.0, 0.05]) put(B, -0.46, loll + dv, surfY + 0.205, 0.14, 0.02, 0.012);
-}
-
 function buildBodies(root, M) {
-  const F = [], G = [], B = [];
   const ALL = [...BED_CORPSES, ...FLOOR_BODIES];
-  for (const b of ALL) pushCorpse(F, G, B, b.x, b.z, b.surf, b.axis, b.i);
-  mergedMesh(root, F, M.flesh, 'inf_corpse_flesh');
-  mergedMesh(root, G, M.shroud, 'inf_corpse_garb');
-  mergedMesh(root, B, M.black, 'inf_corpse_black');
+  // Shared low-poly corpses. Each lies along its stored axis with the head toward
+  // the -axis end (the wall end on a bed): axis 'z' → head -z (yaw +PI/2); axis
+  // 'x' → head -x (yaw PI). Grounded on its real surface (bed mattress or floor).
+  for (const b of ALL) {
+    const onBed = b.surf > 0.1;
+    const pose  = onBed ? 'supine' : (b.i % 2 ? 'side' : 'supine');
+    const yaw   = (b.axis === 'x') ? Math.PI : Math.PI / 2;
+    const cloth = onBed ? 0x6a6456 : 0x5a5348;   // pale shroud / muted for the floor
+    const c = makeCorpse({ pose, cloth, seed: 11 + b.i });
+    c.position.set(b.x, b.surf, b.z);
+    c.rotation.y = yaw;
+    root.add(c);
+    // generous dark-brown plague stain under each (small on a bed, big on the floor)
+    const st = makeStain({ r: onBed ? 0.6 : 1.2, seed: 7 + b.i });
+    st.position.set(b.x, b.surf + 0.002, b.z);
+    root.add(st);
+  }
 
   // a flat dark mark under each body; scrub-marks beside the floor stains
   // (the brush went at the stone and gave out first). Scrub detail over stain.

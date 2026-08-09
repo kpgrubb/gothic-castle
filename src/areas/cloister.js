@@ -3,6 +3,7 @@ import { ps1ify, crunch } from '../core/ps1.js';
 import {
   registerCollider, registerFloor, registerInteractable, addLight,
 } from '../core/scene.js';
+import { makeCorpse, makeStain } from '../content/corpse.js';
 
 // ===========================================================================
 // THE CLOISTER  (atlas location #9 — the Ward cluster's connective refinement,
@@ -436,31 +437,26 @@ function buildWell(root, M) {
 const BODY_A = { cx: 99.0, cz: -90.4, dir: 1 };    // head toward +x (toward B)
 const BODY_B = { cx: 101.6, cz: -89.8, dir: -1 };  // head toward -x (toward A)
 
-function pushFigure(F, G, B, b) {
-  const { cx, cz, dir } = b;
-  const y = 0;
-  const put = (arr, u, v, yy, along, h, across) => pushBox(arr, cx + dir * u, yy, cz + v, along, h, across);
-  // torso (clothing), head, arms (one flung toward the other man), legs, and
-  // blackened hands/feet. u runs head(+)→foot(-); v is the sideways sprawl.
-  put(G, -0.02, 0, y + 0.13, 0.66, 0.22, 0.42);          // torso
-  put(F, 0.52, dir * 0.05, y + 0.12, 0.24, 0.22, 0.22);  // head (lolled)
-  put(F, 0.30, 0.30, y + 0.06, 0.52, 0.10, 0.10);        // arm flung across
-  put(F, 0.28, -0.26, y + 0.06, 0.48, 0.10, 0.10);       // arm at side
-  put(B, 0.56, 0.30, y + 0.05, 0.12, 0.10, 0.10);        // hand (reaching), black
-  put(B, 0.52, -0.26, y + 0.05, 0.12, 0.10, 0.10);       // hand, black
-  put(F, -0.42, 0.11, y + 0.07, 0.58, 0.13, 0.13);       // leg
-  put(F, -0.40, -0.13, y + 0.07, 0.54, 0.13, 0.13);      // leg (knee askew)
-  put(B, -0.72, 0.11, y + 0.05, 0.14, 0.10, 0.10);       // foot, black
-  put(B, -0.70, -0.13, y + 0.05, 0.14, 0.10, 0.10);      // foot, black
-}
-
 function buildBodies(root, M) {
-  const F = [], G = [], B = [];
-  pushFigure(F, G, B, BODY_A);
-  pushFigure(F, G, B, BODY_B);
-  mergedMesh(root, F, M.flesh, 'clo_bodies_flesh');
-  mergedMesh(root, G, M.garb, 'clo_bodies_garb');
-  mergedMesh(root, B, M.black, 'clo_bodies_black');
+  // The two fallen men — shared low-poly corpses. Origin on the floor (y=0),
+  // head toward local +X; rotate so each faces the other. Muted garments.
+  const a = makeCorpse({ pose: 'supine', cloth: 0x45403a, seed: 91 });
+  a.position.set(BODY_A.cx, 0, BODY_A.cz);
+  a.rotation.y = 0;                       // head toward +X (toward B)
+  root.add(a);
+  const b = makeCorpse({ pose: 'side', cloth: 0x39414c, seed: 47 });
+  b.position.set(BODY_B.cx, 0, BODY_B.cz);
+  b.rotation.y = Math.PI;                 // head toward -X (toward A)
+  root.add(b);
+
+  // dark-brown plague STAIN pooled under each man (the rot since the killing;
+  // the red blood below is the fresh violence). Laid flat on the flags.
+  const sa = makeStain({ r: 1.2, seed: 91 });
+  sa.position.set(BODY_A.cx, 0.002, BODY_A.cz);
+  root.add(sa);
+  const sb = makeStain({ r: 1.2, seed: 47 });
+  sb.position.set(BODY_B.cx, 0.002, BODY_B.cz);
+  root.add(sb);
 
   // a dropped blade by each reaching hand, flung to the flags between them
   addBox(root, M.steel, 100.0, 0.04, -90.15, 0.52, 0.03, 0.06, 'clo_blade_a', false, 0.5);

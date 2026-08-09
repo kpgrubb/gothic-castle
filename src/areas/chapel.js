@@ -3,6 +3,7 @@ import { ps1ify, crunch } from '../core/ps1.js';
 import {
   registerCollider, registerFloor, registerInteractable, addLight, onUpdate,
 } from '../core/scene.js';
+import { makeCorpse, makeStain } from '../content/corpse.js';
 
 // ===========================================================================
 // ST. URSEL'S CHAPEL  (atlas #12 — Gen 1 Otwin the Founder, the castle's FIRST
@@ -360,20 +361,17 @@ const LEGS_Z = 96.2;
 const FEET_Z = 96.85;
 
 function buildBody(root, M) {
-  const F = [], G = [], B = [];
-  // habit — torso and lower body
-  pushBox(G, BODY_X, 0.13, TORSO_Z, 0.5, 0.22, 0.8);
-  pushBox(G, BODY_X, 0.11, LEGS_Z, 0.44, 0.2, 0.7);
-  // face
-  pushBox(F, BODY_X, 0.12, HEAD_Z, 0.22, 0.22, 0.24);
-  // folded hands resting on the chest (blackened) — grounded on the torso top
-  pushBox(B, BODY_X, 0.2, 95.0, 0.24, 0.1, 0.18);
-  // feet (blackened), grounded on the floor
-  pushBox(B, BODY_X - 0.12, 0.09, FEET_Z, 0.13, 0.14, 0.16);
-  pushBox(B, BODY_X + 0.12, 0.09, FEET_Z, 0.13, 0.14, 0.16);
-  mergedMesh(root, F, M.flesh, 'chp_body_flesh');
-  mergedMesh(root, G, M.garb, 'chp_body_habit');
-  mergedMesh(root, B, M.black, 'chp_body_black');
+  // Father Anselm — shared low-poly corpse in a cleric's dark habit, supine and
+  // composed at the altar step with the head toward the altar (north, -z), so
+  // yaw = +PI/2. Origin on the floor; body lies flat where the old boxes were.
+  const c = makeCorpse({ pose: 'supine', cloth: 0x2a2620, seed: 13 });
+  c.position.set(BODY_X, 0, 95.2);
+  c.rotation.y = Math.PI / 2;
+  root.add(c);
+  // a big dark-brown plague pool worked into the flags under the long-lying body
+  const st = makeStain({ r: 1.35, seed: 5 });
+  st.position.set(BODY_X, 0.002, 95.4);
+  root.add(st);
 
   // set dark stain under the long-lying body (scrubbed at, never lifted)
   flatQuad(root, M.stain, BODY_X, 0.02, 95.5, 1.0, 2.3, 'chp_body_stain');

@@ -3,6 +3,7 @@ import { ps1ify, crunch } from '../core/ps1.js';
 import {
   registerCollider, registerFloor, registerInteractable, addLight, onUpdate,
 } from '../core/scene.js';
+import { makeCorpse, makeStain } from '../content/corpse.js';
 
 // ===========================================================================
 // THE KEEP (interior)  (atlas #26 — Gen 1 Otwin I, the Founder. "Ancestral: the
@@ -491,29 +492,27 @@ function buildChamberFurniture(root, M) {
 const HALL_BODY = { cx: -105.2, cz: -97, dir: 1, surf: 0 };        // on the flags
 const BED_BODY = { cx: X0 + 1.3, cz: -106, dir: 1, surf: UP_Y + 0.62 }; // on the pallet
 
-function pushFigure(F, G, B, b) {
-  const { cx, cz, dir, surf } = b;
-  const put = (arr, u, v, yy, along, h, across) => pushBox(arr, cx + dir * v, surf + yy, cz + u, across, h, along);
-  // u runs head(+)->foot(-) along z; v is the sideways sprawl along x.
-  put(G, -0.02, 0, 0.13, 0.66, 0.22, 0.42);           // torso / clothing
-  put(F, 0.52, dir * 0.05, 0.12, 0.24, 0.22, 0.22);   // head (lolled)
-  put(F, 0.30, 0.24, 0.06, 0.5, 0.10, 0.10);          // arm, flung
-  put(F, 0.28, -0.22, 0.06, 0.48, 0.10, 0.10);        // arm, at side
-  put(B, 0.55, 0.24, 0.05, 0.12, 0.10, 0.10);         // hand, black
-  put(B, 0.52, -0.22, 0.05, 0.12, 0.10, 0.10);        // hand, black
-  put(F, -0.42, 0.11, 0.07, 0.56, 0.13, 0.13);        // leg
-  put(F, -0.40, -0.13, 0.07, 0.54, 0.13, 0.13);       // leg (askew)
-  put(B, -0.72, 0.11, 0.05, 0.14, 0.10, 0.10);        // foot, black
-  put(B, -0.70, -0.13, 0.05, 0.14, 0.10, 0.10);       // foot, black
-}
-
 function buildBodies(root, M) {
-  const F = [], G = [], B = [];
-  pushFigure(F, G, B, HALL_BODY);
-  pushFigure(F, G, B, BED_BODY);
-  mergedMesh(root, F, M.flesh, 'keep_bodies_flesh');
-  mergedMesh(root, G, M.garb, 'keep_bodies_garb');
-  mergedMesh(root, B, M.black, 'keep_bodies_black');
+  // Shared low-poly corpses. In pushFigure the head ran toward +z, so yaw = -PI/2
+  // points the shared model's head (+x) to +z. Each is grounded on its surface.
+  // hall body — sprawled on his side on the flags, leather/wool
+  const hall = makeCorpse({ pose: 'side', cloth: 0x3d352a, seed: 21 });
+  hall.position.set(HALL_BODY.cx, HALL_BODY.surf, HALL_BODY.cz);
+  hall.rotation.y = -Math.PI / 2;
+  root.add(hall);
+  // bed body — composed supine on the pallet above, a sheet-pale shift
+  const bed = makeCorpse({ pose: 'supine', cloth: 0x9a988e, seed: 22 });
+  bed.position.set(BED_BODY.cx, BED_BODY.surf, BED_BODY.cz);
+  bed.rotation.y = -Math.PI / 2;
+  root.add(bed);
+
+  // generous dark-brown plague stains: a big pool on the flags, a small one on the bed
+  const st1 = makeStain({ r: 1.2, seed: 3 });
+  st1.position.set(HALL_BODY.cx, HALL_BODY.surf + 0.002, HALL_BODY.cz);
+  root.add(st1);
+  const st2 = makeStain({ r: 0.6, seed: 4 });
+  st2.position.set(BED_BODY.cx, BED_BODY.surf + 0.002, BED_BODY.cz);
+  root.add(st2);
 
   // a drawn sheet half over the bed body (composed, up on the pallet)
   addBox(root, M.linen, BED_BODY.cx, BED_BODY.surf + 0.15, BED_BODY.cz + 0.25, 1.1, 0.16, 1.2, 'keep_bed_shroud', false);

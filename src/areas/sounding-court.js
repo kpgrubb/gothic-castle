@@ -3,6 +3,7 @@ import { ps1ify, crunch } from '../core/ps1.js';
 import {
   registerCollider, registerFloor, registerInteractable, addLight, onUpdate,
 } from '../core/scene.js';
+import { makeCorpse, makeStain } from '../content/corpse.js';
 
 // ===========================================================================
 // THE SOUNDING COURT  (castle-atlas #17 · Gen 7 the devil ASTAROTH · world-bible
@@ -340,22 +341,19 @@ function buildFocus(root, M) {
 const BODY = { cx: CX - FOCUS_C, cz: CZ, dir: 1 };
 
 function buildBody(root, M) {
-  const F = [], G = [], B = [];
-  const { cx, cz, dir } = BODY;
-  const put = (arr, u, v, yy, along, h, across) => pushBox(arr, cx + dir * u, yy, cz + v, along, h, across);
-  put(G, -0.02, 0, 0.13, 0.66, 0.22, 0.42);          // torso (dark clothing)
-  put(F, 0.52, dir * 0.04, 0.12, 0.24, 0.22, 0.22);  // head, lolled
-  put(F, 0.28, 0.30, 0.06, 0.5, 0.10, 0.10);         // arm (flung out)
-  put(F, 0.28, -0.26, 0.06, 0.48, 0.10, 0.10);       // arm at side
-  put(B, 0.54, 0.30, 0.05, 0.12, 0.10, 0.10);        // hand, blackened
-  put(B, 0.52, -0.26, 0.05, 0.12, 0.10, 0.10);       // hand, blackened
-  put(F, -0.42, 0.11, 0.07, 0.58, 0.13, 0.13);       // leg
-  put(F, -0.40, -0.13, 0.07, 0.54, 0.13, 0.13);      // leg
-  put(B, -0.72, 0.11, 0.05, 0.14, 0.10, 0.10);       // foot, blackened
-  put(B, -0.70, -0.13, 0.05, 0.14, 0.10, 0.10);      // foot, blackened
-  mergedMesh(root, F, M.flesh, 'snd_body_flesh');
-  mergedMesh(root, G, M.garb, 'snd_body_garb');
-  mergedMesh(root, B, M.black, 'snd_body_black');
+  const { cx, cz } = BODY;
+  // The man who came to listen — a shared low-poly corpse at the west speaking-
+  // mark. Origin on the floor (y=0), head toward local +X; no rotation keeps his
+  // head toward +X as the crude figure lay. Muted garment.
+  const c = makeCorpse({ pose: 'supine', cloth: 0x4b4535, seed: 33 });
+  c.position.set(cx, 0, cz);
+  c.rotation.y = 0;
+  root.add(c);
+
+  // dark-brown plague STAIN pooled under him, laid flat on the flags.
+  const stain = makeStain({ r: 1.2, seed: 33 });
+  stain.position.set(cx, 0.002, cz);
+  root.add(stain);
 
   // an old dark stain under him, and a paler arc where someone scrubbed and gave up
   const st = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 0.7), M.stain);

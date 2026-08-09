@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { ps1ify, crunch } from '../core/ps1.js';
 import { registerCollider, registerInteractable, addLight, onUpdate } from '../core/scene.js';
+import { makeCorpse, makeStain } from '../content/corpse.js';
 
 // ===========================================================================
 // THE ARRIVAL STORY  (story layer over the approach SHELL — another agent owns
@@ -202,36 +203,26 @@ function buildGatePost(root, M) {
 
 // ---------------------------------------------------------------------------
 // A collapsed figure, laid flat where it fell (NOT composed — §8 late/violent).
-// Built in a local frame (head at local −z, legs at +z) and rotated by `ry`.
-// Plain clothing; one bared hand with black fingertips; optional dried blood.
+// Now the SHARED low-poly corpse (../content/corpse.js): a posed body with its
+// own materials, origin ON THE FLOOR (y=0 here), head toward local +X, set by
+// caller position + yaw. A big soft dark-brown plague pool is pooled beneath it
+// (§8 the STAIN, generous around the plague dead). Existing scrub-mark decals
+// and dropped weapons are kept alongside.
+//   pose  'supine'|'facedown'|'side' — fell where they stood
+//   cloth garment hex   seed int   stainR pool radius (≈1.1–1.4 on the cobbles)
 // ---------------------------------------------------------------------------
-function buildBody(root, M, cx, cz, ry, opts = {}) {
-  const g = new THREE.Group();
-  g.position.set(cx, 0, cz);
-  g.rotation.y = ry;
-  g.name = 'apprstory_body';
-  root.add(g);
-
-  const cloth = opts.cloth || M.cloth;
-  // torso, hips/legs, head — a low still shape
-  localBox(g, cloth, 0, 0.12, 0.02, 0.50, 0.24, 0.74, 'apprstory_body_torso');
-  localBox(g, cloth, 0, 0.10, 0.56, 0.42, 0.20, 0.58, 'apprstory_body_legs');
-  localBox(g, M.flesh, 0, 0.11, -0.52, 0.22, 0.22, 0.24, 'apprstory_body_head');
-  // one boot at the leg-end
-  localBox(g, M.leather, 0, 0.09, 0.90, 0.40, 0.16, 0.20, 'apprstory_body_boot');
-
-  // one arm flung to the side, hand bared, fingertips gone black (the §8 detail)
-  localBox(g, cloth, 0.30, 0.09, -0.06, 0.42, 0.13, 0.15, 'apprstory_body_arm');
-  localBox(g, M.flesh, 0.55, 0.075, -0.06, 0.13, 0.08, 0.14, 'apprstory_body_hand');
-  localBox(g, M.black, 0.635, 0.078, -0.06, 0.08, 0.084, 0.14, 'apprstory_body_fingertips');
-
-  // dried blood from the face, dark not red — three streaks is the silhouette
-  if (opts.blood) {
-    for (const [ox, len] of [[-0.06, 0.16], [0.0, 0.20], [0.06, 0.17]]) {
-      localBox(g, M.blood, ox, 0.006, -0.72 - len / 2, 0.03, 0.012, len, 'apprstory_body_blood');
-    }
-  }
-  return g;
+function placeDead(root, cx, cz, ry, opts = {}) {
+  const { pose = 'supine', cloth = 0x6b6656, seed = 1, stainR = 1.25 } = opts;
+  // the dark-brown plague pool first (flat on the cobbles, its own y≈0.02)
+  const stain = makeStain({ r: stainR, seed: seed * 7 + 1 });
+  stain.position.set(cx, 0, cz);
+  root.add(stain);
+  // the corpse on top, dropped where it fell
+  const c = makeCorpse({ pose, cloth, seed });
+  c.position.set(cx, 0, cz);
+  c.rotation.y = ry;
+  root.add(c);
+  return c;
 }
 
 // ---------------------------------------------------------------------------
@@ -244,7 +235,7 @@ function buildBody(root, M, cx, cz, ry, opts = {}) {
 // ---------------------------------------------------------------------------
 function buildGateKillings(root, M) {
   // Body A — the gate-ward, fallen against the shut gate (head toward the gate).
-  buildBody(root, M, -1.2, 56.6, Math.PI + 0.20, { blood: true });
+  placeDead(root, -1.2, 56.6, Math.PI + 0.20, { pose: 'supine', cloth: 0x6b6656, seed: 11, stainR: 1.3 });
   // his helm in the dirt, knocked off (a dome, upturned lip toward the yard)
   const helm = new THREE.Mesh(
     new THREE.SphereGeometry(0.14, 8, 6, 0, Math.PI * 2, 0, Math.PI / 2), M.metal);
@@ -254,7 +245,7 @@ function buildGateKillings(root, M) {
   root.add(helm);
 
   // Body B — one just inside, a dropped bill where the hand let go of it.
-  buildBody(root, M, 1.2, 51.2, 0.5, { blood: true, cloth: M.cloth2 });
+  placeDead(root, 1.2, 51.2, 0.5, { pose: 'facedown', cloth: 0x5c606a, seed: 22, stainR: 1.2 });
   // the bill: a long shaft lying diagonal on the cobbles + a metal head at one end
   const shaft = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 1.7), M.timber);
   shaft.position.set(1.95, 0.05, 51.7);
@@ -281,7 +272,7 @@ function buildGateKillings(root, M) {
 
   // Body C — a townsperson at the mouth of the passage, a satchel burst open
   // beside them. Someone who was trying to leave. No blood; the black hand only.
-  buildBody(root, M, -1.7, 48.7, -0.6, { cloth: M.cloth });
+  placeDead(root, -1.7, 48.7, -0.6, { pose: 'side', cloth: 0x6b6656, seed: 33, stainR: 1.15 });
   buildSpilledSatchel(root, M, -1.15, 48.1);
 }
 
@@ -685,22 +676,22 @@ function buildWardClutter(root, M, world) {
 // ---------------------------------------------------------------------------
 function buildWardDead(root, M) {
   // against the WEST curtain wall (head toward the wall), a stain scrubbed at
-  buildBody(root, M, -16.6, 40.5, Math.PI / 2 + 0.12, { blood: true });
+  placeDead(root, -16.6, 40.5, Math.PI / 2 + 0.12, { pose: 'facedown', cloth: 0x6b6656, seed: 44, stainR: 1.25 });
   buildStainScrub(root, M, -16.3, 40.7, 0.66, 1.0, 0.15, 0.7);
 
   // against the EAST curtain wall, cooler cloth, no blood — just the black hand
-  buildBody(root, M, 16.6, 44.0, -Math.PI / 2 - 0.10, { cloth: M.cloth2 });
+  placeDead(root, 16.6, 44.0, -Math.PI / 2 - 0.10, { pose: 'supine', cloth: 0x5c606a, seed: 55, stainR: 1.2 });
   buildStainScrub(root, M, 16.3, 44.2, 0.60, 0.95, -0.15, 0.65);
 
   // fallen at the WELL, close against the rim
-  buildBody(root, M, -11.3, 31.9, 2.55, { blood: true, cloth: M.cloth });
+  placeDead(root, -11.3, 31.9, 2.55, { pose: 'side', cloth: 0x6b6656, seed: 66, stainR: 1.2 });
   buildStainScrub(root, M, -11.5, 31.7, 0.62, 0.9, 0.30, 0.6);
 
   // by the tipped second cart / the dead beast
-  buildBody(root, M, 8.5, 39.2, -0.70, { blood: true, cloth: M.cloth2 });
+  placeDead(root, 8.5, 39.2, -0.70, { pose: 'facedown', cloth: 0x5c606a, seed: 77, stainR: 1.3 });
 
   // in the NW corner, among the bundles at the façade foot
-  buildBody(root, M, -15.1, 17.7, 0.35, { cloth: M.cloth });
+  placeDead(root, -15.1, 17.7, 0.35, { pose: 'supine', cloth: 0x6b6656, seed: 88, stainR: 1.2 });
 }
 
 // ---------------------------------------------------------------------------

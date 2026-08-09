@@ -3,6 +3,7 @@ import { ps1ify, crunch } from '../core/ps1.js';
 import {
   registerCollider, registerFloor, registerInteractable, addLight,
 } from '../core/scene.js';
+import { makeCorpse, makeStain } from '../content/corpse.js';
 
 // ===========================================================================
 // THE ORDINAL  (atlas #16 — Gen 7, the devil ASTAROTH; world-bible §5.2/§7.2
@@ -337,26 +338,20 @@ function buildVault(root, M) {
 const BODY = { x: CX + 10.0, z: 0.0 };           // (-150, 0) — back toward ring 1 (+X)
 
 function buildBody(root, M) {
-  const F = [], G = [], B = [];
   const { x, z } = BODY;
-  // seated slump: hips on the floor, back leaned toward +X (against the ring),
-  // legs out toward -X (inward). u runs back(+X)->front(-X); v is the side sprawl.
-  const put = (arr, u, v, y, along, h, across) => pushBox(arr, x + u, y, z + v, along, h, across);
-  put(G, 0.10, 0.00, 0.62, 0.34, 0.80, 0.46);            // torso, upright-ish, leaned back
-  put(F, 0.22, 0.05, 1.06, 0.24, 0.24, 0.22);            // head, lolled to the shoulder
-  put(G, -0.02, 0.30, 0.36, 0.30, 0.22, 0.16);           // upper arm, at the side
-  put(G, -0.02, -0.30, 0.36, 0.30, 0.22, 0.16);          // upper arm, other side
-  put(F, -0.30, 0.34, 0.16, 0.44, 0.10, 0.10);           // forearm forward onto the thigh
-  put(F, -0.30, -0.34, 0.16, 0.44, 0.10, 0.10);          // forearm forward onto the thigh
-  put(B, -0.52, 0.34, 0.13, 0.12, 0.10, 0.10);           // hand, blackened
-  put(B, -0.52, -0.34, 0.13, 0.12, 0.10, 0.10);          // hand, blackened
-  put(G, -0.45, 0.16, 0.14, 0.70, 0.16, 0.16);           // leg, out front
-  put(G, -0.45, -0.16, 0.14, 0.70, 0.16, 0.16);          // leg, out front
-  put(B, -0.86, 0.16, 0.08, 0.14, 0.10, 0.14);           // foot, blackened
-  put(B, -0.86, -0.16, 0.08, 0.14, 0.10, 0.14);          // foot, blackened
-  mergedMesh(root, F, M.flesh, 'ord_body_flesh');
-  mergedMesh(root, G, M.garb, 'ord_body_garb');
-  mergedMesh(root, B, M.black, 'ord_body_black');
+  // The man who sat down against ring 1 and never got up — a shared low-poly
+  // SEATED corpse. Origin on the floor (y=0); slumped pose sits with the back
+  // over local -X and the legs/feet toward local +X. Rotate Math.PI so his back
+  // is toward +X (against the ring) and his feet stretch toward -X (the centre).
+  const c = makeCorpse({ pose: 'slumped', cloth: 0x30281f, seed: 71 });
+  c.position.set(x, 0, z);
+  c.rotation.y = Math.PI;
+  root.add(c);
+
+  // dark-brown plague STAIN pooling from where he sits, worked into the brick.
+  const stain = makeStain({ r: 1.2, seed: 71 });
+  stain.position.set(x - 0.05, 0.002, z);
+  root.add(stain);
 
   // stain worked into the brick under him, and the pale brush-ring that gave out
   flatQuad(root, M.stain, x - 0.05, 0.02, z, 0.9, 1.0, 'ord_body_stain');

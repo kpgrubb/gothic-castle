@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { addBox, addMesh, registerAABB } from './geom-utils.js';
 import { registerFloor } from '../core/scene.js';
+import { makeCorpse, makeStain } from '../content/corpse.js';
 
 // ===========================================================================
 // THE NORDTURM — the north tower + Siegmund's study at the top. The emotional
@@ -297,24 +298,20 @@ function buildStudy(root, M) {
   box(0.05, 0.45, 0.05, M.wood, -0.19, 0.22, 0.68, 'arch_nord_chair_leg');
   box(0.05, 0.45, 0.05, M.wood, 0.19, 0.22, 0.68, 'arch_nord_chair_leg');
 
-  // --- Siegmund: seated, slumped FORWARD over the desk (not twisted) ---
-  // hips on the seat
-  box(0.42, 0.26, 0.36, M.timber, 0, 0.5, 0.42, 'arch_nord_body_hips');
-  // torso pitched forward toward the desk (-z), chest coming to rest on the top
-  box(0.44, 0.52, 0.30, M.timber, 0, 0.72, 0.16, 'arch_nord_body_torso', -0.95);
-  // head face-down on the desk, hidden
-  box(0.19, 0.17, 0.20, M.bone, 0, 0.80, -0.12, 'arch_nord_body_head', -0.2);
-  // sleeved arms lying forward on the desk toward the wall
-  box(0.11, 0.09, 0.5, M.timber, -0.17, 0.79, -0.02, 'arch_nord_body_arm', 0.1);
-  box(0.11, 0.09, 0.5, M.timber, 0.17, 0.79, -0.02, 'arch_nord_body_arm', 0.1);
-  // pale hands at the desk; the visible (right) hand carries the one plague detail
-  box(0.12, 0.05, 0.14, M.bone, -0.19, 0.775, -0.26, 'arch_nord_body_hand');
-  box(0.12, 0.05, 0.14, M.bone, 0.19, 0.775, -0.26, 'arch_nord_body_hand');
-  // blackened fingertips (world-bible §8) on the right hand only
-  box(0.12, 0.05, 0.04, M.iron, 0.19, 0.775, -0.35, 'arch_nord_body_fingertips');
-  // legs under the desk
-  box(0.14, 0.5, 0.14, M.timber, -0.13, 0.25, 0.28, 'arch_nord_body_leg');
-  box(0.14, 0.5, 0.14, M.timber, 0.13, 0.25, 0.28, 'arch_nord_body_leg');
+  // --- Siegmund: the SHARED low-poly corpse (../content/corpse.js), 'slumped'
+  // — seated on the chair, back low, head fallen FORWARD toward the desk (-z),
+  // in a scholar's dark robe. Origin on the study floor (local y=0, since the
+  // group sits at STUDY_Y=13). Head runs toward corpse-local +X; a +90° yaw
+  // turns that toward the desk/window (group local -z). A small dark-brown
+  // plague pool soaks the floor beneath the seat. The blackened extremities
+  // (world-bible §8) are carried by the corpse's own materials.
+  const siegStain = makeStain({ r: 0.6, seed: 9 });
+  siegStain.position.set(0, 0, 0.25);   // under the seat, local floor
+  g.add(siegStain);
+  const siegmund = makeCorpse({ pose: 'slumped', cloth: 0x2c2a30, seed: 7 });
+  siegmund.position.set(0, 0, 0.42);    // seated on the chair (seat at local z≈0.5)
+  siegmund.rotation.y = Math.PI / 2;    // head falls forward toward the desk (-z)
+  g.add(siegmund);
 
   // --- desk objects (leave the desktop centre clear for the letter marker) ---
   const inkwell = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.05, 0.07, 6), M.iron);

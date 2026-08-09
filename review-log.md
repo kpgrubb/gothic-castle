@@ -528,3 +528,29 @@ resume); wired to requestLock. Menu now: Continue / Enter Fullscreen / Restart.
 Held the footsteps pack (walking sound was removed earlier by request).
 
 npm run build OK. 0 console errors (favicon only).
+
+---
+
+## Phase: better corpses (shared low-poly model) + more dark-brown stains
+
+Feedback: corpses looked like Minecraft boxes. Researched PS1 body modeling
+(tapered joint-to-joint limb "bones", squashed head, pixel skin/cloth texture,
+~1k tris — not axis cubes). Built src/content/corpse.js:
+- makeCorpse({pose,cloth,seed}) → posed low-poly body (supine/facedown/side/
+  slumped), own skin/cloth/blackened-extremity materials + mottled plague-pallor
+  texture, MERGED to 3 draw calls (per-material geometry buckets via
+  three/addons BufferGeometryUtils.mergeGeometries). Origin on the floor, head
+  toward +X. Iterated the proportions live (flat torso slab + splayed/contorted
+  limbs) until it reads as a body at gameplay distance.
+- makeStain({r}) → big soft dark-brown pooled plague stain (canvas-alpha plane).
+
+SWEEP (4 agents) replaced every crude box-body across the world with makeCorpse
++ makeStain, grounded on the real surface, preserving colliders/docs/examinables/
+existing decals: infirmary (5, beds@0.50 + floor), chapel (Anselm), keep (hall +
+upper bed@5.12), cloister (2 duelists — kept red blood, added brown), ordinal
+(slumped), sounding court, harbour (2 quay + Krug@lantern y17), long gallery
+(clock-watcher), guild hall (Ochs@forge), approach-story (8 gate+ward dead),
+nordturm (Siegmund slumped@desk y13). Generous brown stains under the plague dead.
+
+Verified: gate/ward dead read as sprawled corpses in brown pools (daylight);
+infirmary bed bodies grounded on mattresses. 60fps (3 draws/corpse). npm build OK.
